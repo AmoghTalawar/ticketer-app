@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Design Images Viewer</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-wrap: wrap; gap: 20px; }
+    .card { border: 1px solid #ccc; padding: 10px; width: 150px; text-align: center; }
+    .card img { max-width: 100%; height: auto; }
+    .name { font-size: 12px; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  <script>
+    const images = [
+      'Frame 54.png', 'Frame 54-1.png', 'Frame 54-2.png', 'Frame 54-3.png', 'Frame 54-4.png', 'Frame 54-5.png', 'Frame 54-6.png', 'Frame 54-7.png', 'Frame 54-8.png', 'Frame 54-9.png', 'Frame 54-10.png', 'Frame 54-11.png', 'Frame 54-12.png', 'Frame 54-13.png', 'Frame 54-14.png',
+      'Frame 1171279251.png', 'Frame 1171279251-1.png', 'Frame 1171279251-2.png', 'Frame 1171279251-3.png', 'Frame 1171279251-4.png', 'Frame 1171279251-5.png', 'Frame 1171279251-6.png', 'Frame 1171279251-7.png', 'Frame 1171279251-8.png', 'Frame 1171279251-9.png', 'Frame 1171279251-10.png', 'Frame 1171279251-11.png', 'Frame 1171279251-12.png', 'Frame 1171279251-13.png', 'Frame 1171279251-14.png'
+    ];
+    
+    const container = document.getElementById('container');
+    images.forEach(img => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `<img src="${img}" /><div class="name">${img}</div>`;
+      container.appendChild(card);
+    });
+  </script>
+</body>
+</html>
