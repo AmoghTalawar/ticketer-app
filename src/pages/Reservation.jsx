@@ -3,6 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { Check, Trash2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { CONCERT_IMAGES } from '../constants/images';
+
+const isSeatReserved = (seatId) => {
+  let hash = 0;
+  for (let i = 0; i < seatId.length; i++) {
+    hash = seatId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return (Math.abs(hash) % 5) === 0; // Stable 20% reserved
+};
 
 const Reservation = () => {
   const navigate = useNavigate();
@@ -15,7 +24,7 @@ const Reservation = () => {
         {Array.from({ length: numSeats }).map((_, i) => {
           const seatId = `S${sectionOffset}-${rowId}-${i + 1}`;
           const isSelected = selectedSeats.includes(seatId);
-          const isReserved = Math.random() < 0.2; // Mock 20% reserved
+          const isReserved = isSeatReserved(seatId);
           
           let bgColor = '#e0e0ff'; // Available
           if (isReserved) bgColor = '#4A3AFF'; // Reserved (dark blue)
@@ -90,7 +99,7 @@ const Reservation = () => {
         {/* Concert Info */}
         <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#111' }}>Taylor Swift Concert "The Eras Tour"</h1>
         
-        <img src="https://images.unsplash.com/photo-1540039155732-d674d5e8ac04?auto=format&fit=crop&q=80&w=1200" alt="Concert" style={{ width: '100%', height: '300px', objectFit: 'cover', borderRadius: '16px', marginBottom: '1.5rem' }} />
+        <img src={CONCERT_IMAGES.taylor_swift} alt="Concert" referrerPolicy="no-referrer" style={{ width: '100%', height: '300px', objectFit: 'cover', borderRadius: '16px', marginBottom: '1.5rem' }} />
         
         <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#111' }}>The Eras Tour: Taylor Swift</h2>
         <p style={{ color: '#555', marginBottom: '2rem' }}>Mon, June 04 . 08:00 pm . Royal Albert Hall.</p>
@@ -100,13 +109,13 @@ const Reservation = () => {
           <span style={{ fontSize: '1.2rem', color: '#111' }}>Ticket Price:</span>
           <div style={{ display: 'flex', gap: '1rem' }}>
             <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '0.5rem 1rem', background: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 'bold' }}>$399</span> | <span style={{ color: '#555' }}>VIP tickets</span>
+              <span style={{ fontWeight: 'bold' }}>₹399</span> | <span style={{ color: '#555' }}>VIP tickets</span>
             </div>
             <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '0.5rem 1rem', background: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 'bold' }}>$299</span> | <span style={{ color: '#555' }}>Standard tickets</span>
+              <span style={{ fontWeight: 'bold' }}>₹299</span> | <span style={{ color: '#555' }}>Standard tickets</span>
             </div>
             <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '0.5rem 1rem', background: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 'bold' }}>$199</span> | <span style={{ color: '#555' }}>Economic tickets</span>
+              <span style={{ fontWeight: 'bold' }}>₹199</span> | <span style={{ color: '#555' }}>Economic tickets</span>
             </div>
           </div>
         </div>
@@ -179,12 +188,12 @@ const Reservation = () => {
                 <>
                   {selectedSeats.map(seat => (
                     <div key={seat} style={{ background: '#fff', padding: '1rem', borderRadius: '16px', display: 'flex', gap: '1rem', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
-                       <img src="https://images.unsplash.com/photo-1540039155732-d674d5e8ac04?auto=format&fit=crop&q=80&w=150" alt="Concert thumb" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />
+                       <img src={CONCERT_IMAGES.taylor_swift} alt="Concert thumb" referrerPolicy="no-referrer" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />
                        <div style={{ flex: 1 }}>
                           <h4 style={{ fontWeight: 'bold', fontSize: '1rem', marginBottom: '0.25rem' }}>Taylor Swift: The Eras Tour</h4>
                           <div style={{ color: '#555', fontSize: '0.85rem', marginBottom: '0.25rem' }}>June 04, Mon. 08:00 pm . VIP Ticket</div>
                           <div style={{ color: '#555', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Section {seat.split('-')[0].replace('S', '')}, Row {seat.split('-')[1]}, Seat {seat.split('-')[2]}</div>
-                          <div style={{ fontWeight: 'bold' }}>${ticketPrice.toFixed(2)}</div>
+                          <div style={{ fontWeight: 'bold' }}>₹{ticketPrice.toFixed(2)}</div>
                        </div>
                        <button onClick={() => removeSeat(seat)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#888', position: 'absolute', top: '1rem', right: '1rem' }}>
                           <Trash2 size={18} />
@@ -195,15 +204,15 @@ const Reservation = () => {
                   <div style={{ background: '#fff', padding: '2rem', borderRadius: '16px', boxShadow: 'var(--shadow-sm)', marginTop: '1rem' }}>
                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#555' }}>
                         <span>Subtotal</span>
-                        <span>${subtotal.toFixed(2)}</span>
+                        <span>₹{subtotal.toFixed(2)}</span>
                      </div>
                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', color: '#555' }}>
                         <span>Service Fees</span>
-                        <span>${serviceFee.toFixed(2)}</span>
+                        <span>₹{serviceFee.toFixed(2)}</span>
                      </div>
                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                        <span>Total USD ({selectedSeats.length} item{selectedSeats.length > 1 ? 's' : ''})</span>
-                        <span>${total.toFixed(2)}</span>
+                        <span>Total INR ({selectedSeats.length} item{selectedSeats.length > 1 ? 's' : ''})</span>
+                        <span>₹{total.toFixed(2)}</span>
                      </div>
                      <button 
                        className="btn btn-primary" 

@@ -2,6 +2,7 @@ import React from 'react';
 import { Phone, Mail, Navigation } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { CONCERT_IMAGES } from '../constants/images';
 
 const ContactUs = () => {
   return (
@@ -25,7 +26,7 @@ const ContactUs = () => {
             <div style={{ 
                 position: 'relative', 
                 minHeight: '600px',
-                backgroundImage: 'url("https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&q=80&w=1200")',
+                backgroundImage: `url(${CONCERT_IMAGES.coldplay})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center'
             }}>

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { CONCERT_IMAGES } from '../constants/images';
 
 const Checkout = () => {
   const location = useLocation();
@@ -67,12 +68,12 @@ const Checkout = () => {
               
               {selectedSeats.map(seat => (
                 <div key={seat} style={{ display: 'flex', gap: '1.5rem', borderBottom: '1px solid #eaeaea', paddingBottom: '1.5rem' }}>
-                   <img src="https://images.unsplash.com/photo-1540039155732-d674d5e8ac04?auto=format&fit=crop&q=80&w=200" alt="Concert thumb" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '12px' }} />
+                   <img src={CONCERT_IMAGES.taylor_swift} alt="Concert thumb" referrerPolicy="no-referrer" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '12px' }} />
                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                       <h4 style={{ fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Taylor Swift: The Eras Tour</h4>
                       <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.25rem' }}>June 04, Mon. 08:00 pm . VIP Ticket</div>
                       <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Section {seat.split('-')[0].replace('S', '')}, Row {seat.split('-')[1]}, Seat {seat.split('-')[2]}</div>
-                      <div style={{ fontWeight: 'bold', marginTop: 'auto' }}>${ticketPrice.toFixed(2)}</div>
+                      <div style={{ fontWeight: 'bold', marginTop: 'auto' }}>₹{ticketPrice.toFixed(2)}</div>
                    </div>
                 </div>
               ))}
@@ -80,15 +81,15 @@ const Checkout = () => {
               <div style={{ marginTop: '1rem' }}>
                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', color: '#555', fontSize: '1.1rem' }}>
                     <span>Subtotal</span>
-                    <span>${ticketPrice.toFixed(2)} x{selectedSeats.length}</span>
+                    <span>₹{ticketPrice.toFixed(2)} x{selectedSeats.length}</span>
                  </div>
                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', color: '#555', fontSize: '1.1rem' }}>
                     <span>Service Fees</span>
-                    <span>$1.00 x{selectedSeats.length}</span>
+                    <span>₹1.00 x{selectedSeats.length}</span>
                  </div>
                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', fontWeight: 'bold', fontSize: '1.3rem', borderTop: '1px solid #eaeaea', paddingTop: '1.5rem' }}>
-                    <span>Total USD <span style={{ fontWeight: 'normal', color: '#888', fontSize: '1.1rem' }}>({selectedSeats.length} item{selectedSeats.length > 1 ? 's' : ''})</span></span>
-                    <span>${total.toFixed(2)}</span>
+                    <span>Total INR <span style={{ fontWeight: 'normal', color: '#888', fontSize: '1.1rem' }}>({selectedSeats.length} item{selectedSeats.length > 1 ? 's' : ''})</span></span>
+                    <span>₹{total.toFixed(2)}</span>
                  </div>
               </div>
            </div>
@@ -148,7 +149,7 @@ const Checkout = () => {
               </div>
 
               <button className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }} onClick={handleCheckout}>
-                 Pay ${total.toFixed(2)}
+                 Pay ₹{total.toFixed(2)}
               </button>
 
            </div>

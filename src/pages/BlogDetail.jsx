@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { CONCERT_IMAGES } from '../constants/images';
 
 const BlogDetail = () => {
   const { id } = useParams();
@@ -14,8 +15,9 @@ const BlogDetail = () => {
         {/* Header Hero Image */}
         <div style={{ position: 'relative', width: '100%', height: '500px' }}>
           <img 
-            src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&q=80&w=2000" 
+            src={CONCERT_IMAGES.coldplay} 
             alt="Blog Cover" 
+            referrerPolicy="no-referrer"
             style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
           />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }}></div>
@@ -48,8 +50,9 @@ const BlogDetail = () => {
           </p>
 
           <img 
-            src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=1200" 
+            src={CONCERT_IMAGES.billie_eilish} 
             alt="Small Club Gig" 
+            referrerPolicy="no-referrer"
             style={{ width: '100%', height: 'auto', borderRadius: '12px', margin: '2rem 0' }} 
           />
 
@@ -78,7 +81,7 @@ const BlogDetail = () => {
             <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111', marginBottom: '2rem' }}>Comments (2)</h3>
             
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" alt="Avatar" style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
+              <img src="https://ui-avatars.com/api/?name=Jane+Doe&background=random" alt="Avatar" referrerPolicy="no-referrer" style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
               <div>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'baseline', marginBottom: '0.5rem' }}>
                   <h4 style={{ fontWeight: 'bold', color: '#111' }}>Jane Doe</h4>
@@ -90,7 +93,7 @@ const BlogDetail = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', marginLeft: '4rem' }}>
-              <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=100" alt="Avatar" style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
+              <img src="https://ui-avatars.com/api/?name=John+Smith&background=random" alt="Avatar" referrerPolicy="no-referrer" style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
               <div>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'baseline', marginBottom: '0.5rem' }}>
                   <h4 style={{ fontWeight: 'bold', color: '#111' }}>John Smith</h4>

@@ -3,25 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Calendar, MapPin, ChevronRight, ChevronLeft, CreditCard, Clock, Ticket, ShieldCheck, Mail } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { SINGER_IMAGES, CONCERT_IMAGES } from '../constants/images';
 
 const Home = () => {
   const navigate = useNavigate();
 
   const artists = [
-    { name: 'Enrique Iglesias', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Enrique_Iglesias_2011%2C_2.jpg/960px-Enrique_Iglesias_2011%2C_2.jpg', location: 'Manchester', date: 'Oct 17 - Oct 21', price: 299.99 },
-    { name: 'Ariana Grande', img: 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Ariana_Grande_promoting_Wicked_%282024%29.jpg', location: 'London', date: 'Oct 22 - Oct 26', price: 199.99 },
-    { name: 'Justin Bieber', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Justin_Bieber_in_2015.jpg/960px-Justin_Bieber_in_2015.jpg', location: 'Manchester', date: 'Oct 24 - Oct 29', price: 199.99 },
-    { name: 'Celine Dion', img: 'https://upload.wikimedia.org/wikipedia/commons/f/f5/C%C3%A9line_Dion_2012.jpg', location: 'Bristol', date: 'Oct 28 - Oct 30', price: 499.99 },
-    { name: 'Selena Gomez', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Selena_Gomez_at_the_2024_Toronto_International_Film_Festival_10_%28cropped%29.jpg/960px-Selena_Gomez_at_the_2024_Toronto_International_Film_Festival_10_%28cropped%29.jpg', location: 'London', date: 'Oct 30 - Oct 31', price: 299.99 }
+    { name: 'Enrique Iglesias', img: SINGER_IMAGES.enrique_iglesias, location: 'Manchester', date: 'Oct 17 - Oct 21', price: 299.99 },
+    { name: 'Ariana Grande', img: SINGER_IMAGES.ariana_grande, location: 'London', date: 'Oct 22 - Oct 26', price: 199.99 },
+    { name: 'Justin Bieber', img: SINGER_IMAGES.justin_bieber, location: 'Manchester', date: 'Oct 24 - Oct 29', price: 199.99 },
+    { name: 'Celine Dion', img: SINGER_IMAGES.celine_dion, location: 'Bristol', date: 'Oct 28 - Oct 30', price: 499.99 },
+    { name: 'Selena Gomez', img: SINGER_IMAGES.selena_gomez, location: 'London', date: 'Oct 30 - Oct 31', price: 299.99 }
   ];
 
   const events = [
-    { title: 'Taylor Swift', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Taylor_Swift_at_the_2023_MTV_Video_Music_Awards_%283%29.png/960px-Taylor_Swift_at_the_2023_MTV_Video_Music_Awards_%283%29.png', date: 'June 14 - June 19 London', price: 799.99, timeEnd: '15D, 08:45:03' },
-    { title: 'Dua Lipa', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Dua_Lipa-69798_%28cropped%29.jpg/960px-Dua_Lipa-69798_%28cropped%29.jpg', date: 'July 20 - July 24 Paris', price: 399.99, timeEnd: '25D, 11:34:03' },
-    { title: 'Lady Gaga', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Lady_Gaga_at_Joe_Biden%27s_inauguration_%28cropped_5%29.jpg/960px-Lady_Gaga_at_Joe_Biden%27s_inauguration_%28cropped_5%29.jpg', date: 'Aug 10 - Aug 15 New York', price: 450.00, timeEnd: '45D, 05:45:09' },
-    { title: 'Adele', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Adele_2016.jpg/960px-Adele_2016.jpg', date: 'Sep 05 - Sep 09 Berlin', price: 499.99, timeEnd: '75D, 10:00:00' },
-    { title: 'Ed Sheeran', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Ed_Sheeran-6886_%28cropped%29.jpg/960px-Ed_Sheeran-6886_%28cropped%29.jpg', date: 'Oct 12 - Oct 18 Tokyo', price: 150.00, timeEnd: '105D, 12:30:00' },
-    { title: 'Rihanna', img: 'https://upload.wikimedia.org/wikipedia/commons/c/c2/Rihanna_Fenty_2018.png', date: 'Nov 22 - Nov 26 Sydney', price: 599.99, timeEnd: '145D, 09:15:00' }
+    { title: 'Taylor Swift', img: CONCERT_IMAGES.taylor_swift, date: 'June 14 - June 19 London', price: 799.99, timeEnd: '15D, 08:45:03' },
+    { title: 'Dua Lipa', img: CONCERT_IMAGES.dua_lipa, date: 'July 20 - July 24 Paris', price: 399.99, timeEnd: '25D, 11:34:03' },
+    { title: 'Lady Gaga', img: CONCERT_IMAGES.lady_gaga, date: 'Aug 10 - Aug 15 New York', price: 450.00, timeEnd: '45D, 05:45:09' },
+    { title: 'Adele', img: CONCERT_IMAGES.adele, date: 'Sep 05 - Sep 09 Berlin', price: 499.99, timeEnd: '75D, 10:00:00' },
+    { title: 'Ed Sheeran', img: CONCERT_IMAGES.ed_sheeran, date: 'Oct 12 - Oct 18 Tokyo', price: 150.00, timeEnd: '105D, 12:30:00' },
+    { title: 'Rihanna', img: CONCERT_IMAGES.rihanna, date: 'Nov 22 - Nov 26 Sydney', price: 599.99, timeEnd: '145D, 09:15:00' }
   ];
 
   return (
@@ -55,11 +56,11 @@ const Home = () => {
           <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginTop: '4rem', overflowX: 'auto', paddingBottom: '2rem' }}>
             {artists.map((artist, idx) => (
               <div key={idx} style={{ background: 'white', borderRadius: '12px', padding: '0.5rem', color: 'black', width: '220px', textAlign: 'left', flexShrink: 0 }}>
-                <img src={artist.img} alt={artist.name} style={{ width: '100%', height: '220px', objectFit: 'cover', borderRadius: '8px' }} />
+                <img src={artist.img} alt={artist.name} referrerPolicy="no-referrer" style={{ width: '100%', height: '220px', objectFit: 'cover', borderRadius: '8px' }} />
                 <div style={{ padding: '1rem 0.5rem 0.5rem' }}>
                   <h3 style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>{artist.name}</h3>
                   <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{artist.location} • {artist.date}</p>
-                  <div style={{ fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '1rem' }}>${artist.price}</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '1rem' }}>₹{artist.price}</div>
                   <button className="btn btn-light" style={{ width: '100%', padding: '0.5rem' }} onClick={() => navigate('/reservation')}>Book Now</button>
                 </div>
               </div>
@@ -122,7 +123,7 @@ const Home = () => {
             {events.map((event, idx) => (
               <div key={idx} style={{ width: '300px', flexShrink: 0, textAlign: 'left' }}>
                 <div style={{ position: 'relative', height: '350px', borderRadius: '16px', overflow: 'hidden', marginBottom: '1rem' }}>
-                  <img src={event.img} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={event.img} alt={event.title} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', padding: '2rem 1rem 1rem', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                      <div className="flex items-center gap-2"><Clock size={16} /> Time to end</div>
                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{event.timeEnd}</div>
@@ -130,7 +131,7 @@ const Home = () => {
                 </div>
                 <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>{event.title}</h3>
                 <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>{event.date}</p>
-                <div style={{ fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '1rem' }}>${event.price}</div>
+                <div style={{ fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '1rem' }}>₹{event.price}</div>
                 <button className="btn btn-light" style={{ width: '100%' }} onClick={() => navigate('/reservation')}>Book Now</button>
               </div>
             ))}
@@ -183,10 +184,10 @@ const Home = () => {
           </div>
 
           <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', overflowX: 'auto', paddingBottom: '2rem' }}>
-            {['Shakira', 'Pitbull', 'Lady Gaga', 'Omarion'].map((name, idx) => (
+            {['Shakira', 'Pitbull', 'Lady Gaga', 'Bruno Mars'].map((name, idx) => (
               <div key={idx} style={{ width: '250px', flexShrink: 0, textAlign: 'left' }}>
                 <div style={{ position: 'relative', height: '300px', borderRadius: '16px', overflow: 'hidden', marginBottom: '1rem', background: '#333' }}>
-                  <img src={`https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=600&sig=${idx}`} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={CONCERT_IMAGES[name.toLowerCase().replace(' ', '_')]} alt={name} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.8))' }}></div>
                   <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', textAlign: 'center' }}>
                     <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Coming soon</div>
@@ -218,20 +219,20 @@ const Home = () => {
           </div>
           <div style={{ flex: 2, display: 'flex', gap: '2rem' }}>
              <div style={{ flex: 1 }}>
-               <img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&q=80&w=600" alt="Blog 1" style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '12px', marginBottom: '1rem' }} />
+               <img src={CONCERT_IMAGES.taylor_swift} alt="Blog 1" referrerPolicy="no-referrer" style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '12px', marginBottom: '1rem' }} />
                <h4 style={{ marginBottom: '0.5rem' }}>Taylor Swift in Biggest World Tour</h4>
                <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>Lorem ipsum dolor sit amet consectetur. A vivamus donec bibendum massa erat the ultrices nulla.</p>
                <div className="flex items-center gap-2">
-                 <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" alt="Jonathan" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+                 <img src="https://ui-avatars.com/api/?name=Jonathan+Willis&background=random" alt="Jonathan" referrerPolicy="no-referrer" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
                  <div style={{ fontSize: '0.8rem' }}><b>Jonathan Willis</b><br/><span style={{ color: '#888' }}>July 17, 2024. 5 min</span></div>
                </div>
              </div>
              <div style={{ flex: 1 }}>
-               <img src="https://images.unsplash.com/photo-1540039155732-d674d5e8ac04?auto=format&fit=crop&q=80&w=600" alt="Blog 2" style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '12px', marginBottom: '1rem' }} />
+               <img src={CONCERT_IMAGES.adele} alt="Blog 2" referrerPolicy="no-referrer" style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '12px', marginBottom: '1rem' }} />
                <h4 style={{ marginBottom: '0.5rem' }}>Royal Albert Hall New Events</h4>
                <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>Lorem ipsum dolor sit amet consectetur. A vivamus donec bibendum massa erat the ultrices nulla.</p>
                <div className="flex items-center gap-2">
-                 <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=100" alt="Marian" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+                 <img src="https://ui-avatars.com/api/?name=Marian+Ed&background=random" alt="Marian" referrerPolicy="no-referrer" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
                  <div style={{ fontSize: '0.8rem' }}><b>Marian Ed</b><br/><span style={{ color: '#888' }}>June 13, 2024. 10 min</span></div>
                </div>
              </div>
@@ -250,7 +251,7 @@ const Home = () => {
                <div style={{ fontSize: '3rem', color: 'var(--clr-primary-500)', lineHeight: '1', marginBottom: '1rem' }}>"</div>
                <p style={{ marginBottom: '1.5rem', lineHeight: '1.6' }}>We got tickets for Taylor Swift when noone else could. We had the best time ever at teh concert. Thanks Ticketer, your reselling site made it possible to have what seemed impossible!</p>
                <div className="flex items-center gap-4">
-                 <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" alt="Emily" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />
+                 <img src="https://ui-avatars.com/api/?name=Emily&background=random" alt="Emily" referrerPolicy="no-referrer" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />
                  <div>
                    <div style={{ fontWeight: 'bold' }}>Emily</div>
                    <div style={{ fontSize: '0.8rem', color: '#888' }}>Manchester, UK</div>
@@ -261,7 +262,7 @@ const Home = () => {
                <div style={{ fontSize: '3rem', color: 'var(--clr-primary-500)', lineHeight: '1', marginBottom: '1rem' }}>"</div>
                <p style={{ marginBottom: '1.5rem', lineHeight: '1.6' }}>Ok so credit where its due having raised the issue with they quickly got back to me and refunded the difference. They also managed to get me the tickets so my daughter got to see Taylor Swift</p>
                <div className="flex items-center gap-4">
-                 <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=100" alt="William" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />
+                 <img src="https://ui-avatars.com/api/?name=William&background=random" alt="William" referrerPolicy="no-referrer" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />
                  <div>
                    <div style={{ fontWeight: 'bold' }}>William</div>
                    <div style={{ fontSize: '0.8rem', color: '#888' }}>Birmingham, UK</div>
@@ -272,7 +273,7 @@ const Home = () => {
                <div style={{ fontSize: '3rem', color: 'var(--clr-primary-500)', lineHeight: '1', marginBottom: '1rem' }}>"</div>
                <p style={{ marginBottom: '1.5rem', lineHeight: '1.6' }}>I had such a great experience!!! I bought an eras tour ticket and they promised to transfer it until the upcoming concert which is 10 days away. I got the ticket the day after.</p>
                <div className="flex items-center gap-4">
-                 <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=100" alt="Daisy" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />
+                 <img src="https://ui-avatars.com/api/?name=Daisy&background=random" alt="Daisy" referrerPolicy="no-referrer" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />
                  <div>
                    <div style={{ fontWeight: 'bold' }}>Daisy</div>
                    <div style={{ fontSize: '0.8rem', color: '#888' }}>Liverpool, UK</div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { CONCERT_IMAGES } from '../constants/images';
 
 const Account = () => {
   const [activeTab, setActiveTab] = useState('My Hub');
@@ -47,7 +48,7 @@ const Account = () => {
             {activeTab === 'My Hub' && (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '3rem' }}>
-                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150" alt="Profile" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover' }} />
+                  <img src="https://ui-avatars.com/api/?name=Annette+Black&background=random" alt="Profile" referrerPolicy="no-referrer" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover' }} />
                   <div>
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111', marginBottom: '0.25rem' }}>Annette Black</h2>
                     <p style={{ color: '#888' }}>London, United Kingdom</p>
@@ -58,7 +59,7 @@ const Account = () => {
                 
                 <div style={{ display: 'flex', gap: '1.5rem', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', gap: '1.5rem', border: '1px solid #eaeaea', borderRadius: '12px', padding: '1rem' }}>
-                    <img src="https://images.unsplash.com/photo-1540039155732-d674d5e8ac04?auto=format&fit=crop&q=80&w=200" alt="Concert" style={{ width: '120px', height: '120px', borderRadius: '8px', objectFit: 'cover' }} />
+                    <img src={CONCERT_IMAGES.taylor_swift} alt="Concert" referrerPolicy="no-referrer" style={{ width: '120px', height: '120px', borderRadius: '8px', objectFit: 'cover' }} />
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                       <h4 style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.25rem' }}>Taylor Swift: The Eras Tour</h4>
                       <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Mon, June 04 . 08:00 pm</div>

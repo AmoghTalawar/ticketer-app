@@ -3,19 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Calendar, MapPin, Filter, Clock } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { CONCERT_IMAGES } from '../constants/images';
 
 const Concerts = () => {
   const navigate = useNavigate();
 
   const events = [
-    { title: 'Taylor Swift', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Taylor_Swift_at_the_2023_MTV_Video_Music_Awards_%283%29.png/960px-Taylor_Swift_at_the_2023_MTV_Video_Music_Awards_%283%29.png', date: 'June 14 - June 19 London', price: 799.99, timeEnd: '15D, 08:45:03' },
-    { title: 'Dua Lipa', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Dua_Lipa-69798_%28cropped%29.jpg/960px-Dua_Lipa-69798_%28cropped%29.jpg', date: 'July 20 - July 24 Paris', price: 399.99, timeEnd: '25D, 11:34:03' },
-    { title: 'Lady Gaga', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Lady_Gaga_at_Joe_Biden%27s_inauguration_%28cropped_5%29.jpg/960px-Lady_Gaga_at_Joe_Biden%27s_inauguration_%28cropped_5%29.jpg', date: 'Aug 10 - Aug 15 New York', price: 450.00, timeEnd: '45D, 05:45:09' },
-    { title: 'Adele', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Adele_2016.jpg/960px-Adele_2016.jpg', date: 'Sep 05 - Sep 09 Berlin', price: 499.99, timeEnd: '75D, 10:00:00' },
-    { title: 'Ed Sheeran', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Ed_Sheeran-6886_%28cropped%29.jpg/960px-Ed_Sheeran-6886_%28cropped%29.jpg', date: 'Oct 12 - Oct 18 Tokyo', price: 150.00, timeEnd: '105D, 12:30:00' },
-    { title: 'Rihanna', img: 'https://upload.wikimedia.org/wikipedia/commons/c/c2/Rihanna_Fenty_2018.png', date: 'Nov 22 - Nov 26 Sydney', price: 599.99, timeEnd: '145D, 09:15:00' },
-    { title: 'Billie Eilish', img: 'https://upload.wikimedia.org/wikipedia/commons/c/c7/BillieEilishO2140725-39_-_54665577407_%28cropped%29.jpg', date: 'Dec 01 - Dec 05 Toronto', price: 350.00, timeEnd: '160D, 14:20:00' },
-    { title: 'Pitbull', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Pitbull_%2852703405994%29_%28cropped%29.jpg/960px-Pitbull_%2852703405994%29_%28cropped%29.jpg', date: 'Jan 10 - Jan 15 Miami', price: 250.00, timeEnd: '200D, 08:00:00' }
+    { title: 'Taylor Swift', img: CONCERT_IMAGES.taylor_swift, date: 'June 14 - June 19 London', price: 799.99, timeEnd: '15D, 08:45:03' },
+    { title: 'Dua Lipa', img: CONCERT_IMAGES.dua_lipa, date: 'July 20 - July 24 Paris', price: 399.99, timeEnd: '25D, 11:34:03' },
+    { title: 'Lady Gaga', img: CONCERT_IMAGES.lady_gaga, date: 'Aug 10 - Aug 15 New York', price: 450.00, timeEnd: '45D, 05:45:09' },
+    { title: 'Adele', img: CONCERT_IMAGES.adele, date: 'Sep 05 - Sep 09 Berlin', price: 499.99, timeEnd: '75D, 10:00:00' },
+    { title: 'Ed Sheeran', img: CONCERT_IMAGES.ed_sheeran, date: 'Oct 12 - Oct 18 Tokyo', price: 150.00, timeEnd: '105D, 12:30:00' },
+    { title: 'Rihanna', img: CONCERT_IMAGES.rihanna, date: 'Nov 22 - Nov 26 Sydney', price: 599.99, timeEnd: '145D, 09:15:00' },
+    { title: 'Billie Eilish', img: CONCERT_IMAGES.billie_eilish, date: 'Dec 01 - Dec 05 Toronto', price: 350.00, timeEnd: '160D, 14:20:00' },
+    { title: 'Pitbull', img: CONCERT_IMAGES.pitbull, date: 'Jan 10 - Jan 15 Miami', price: 250.00, timeEnd: '200D, 08:00:00' }
   ];
 
   return (
@@ -59,7 +60,7 @@ const Concerts = () => {
             {events.map((event, idx) => (
               <div key={idx} style={{ background: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
                 <div style={{ position: 'relative', height: '250px' }}>
-                  <img src={event.img} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={event.img} alt={event.title} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', padding: '2rem 1rem 1rem', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                      <div className="flex items-center gap-2"><Clock size={16} /> Time to end</div>
                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{event.timeEnd}</div>
@@ -71,7 +72,7 @@ const Concerts = () => {
                     <Calendar size={16} /> {event.date}
                   </div>
                   <div className="flex justify-between items-center">
-                    <div style={{ fontWeight: 'bold', fontSize: '1.25rem', color: 'var(--clr-primary-500)' }}>${event.price}</div>
+                    <div style={{ fontWeight: 'bold', fontSize: '1.25rem', color: 'var(--clr-primary-500)' }}>₹{event.price}</div>
                     <button className="btn btn-primary" onClick={() => navigate('/reservation')} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>Book Now</button>
                   </div>
                 </div>

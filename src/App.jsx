@@ -15,6 +15,14 @@ import Register from './pages/Register';
 import Account from './pages/Account';
 import SearchResults from './pages/SearchResults';
 import NotFound from './pages/NotFound';
+import OrganizerDashboard from './pages/OrganizerDashboard';
+import CreateEvent from './pages/CreateEvent';
+import MyTickets from './pages/MyTickets';
+import ResaleMarket from './pages/ResaleMarket';
+import TicketVerification from './pages/TicketVerification';
+import MintSuccess from './pages/MintSuccess';
+import TransactionHistory from './pages/TransactionHistory';
+import EventDetail from './pages/EventDetail';
 import './index.css';
 
 function App() {
@@ -35,6 +43,14 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/account" element={<Account />} />
         <Route path="/search" element={<SearchResults />} />
+        <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
+        <Route path="/create-event" element={<CreateEvent />} />
+        <Route path="/my-tickets" element={<MyTickets />} />
+        <Route path="/resale-market" element={<ResaleMarket />} />
+        <Route path="/ticket-verification" element={<TicketVerification />} />
+        <Route path="/mint-success" element={<MintSuccess />} />
+        <Route path="/transaction-history" element={<TransactionHistory />} />
+        <Route path="/event/:id" element={<EventDetail />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
