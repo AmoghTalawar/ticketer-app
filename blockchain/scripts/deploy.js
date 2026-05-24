@@ -81,7 +81,7 @@ async function main() {
 
   const frontendContractsDir = path.join(
     __dirname,
-    "../src/contracts"
+    "../../src/contracts"
   );
   if (!fs.existsSync(frontendContractsDir)) {
     fs.mkdirSync(frontendContractsDir, { recursive: true });
