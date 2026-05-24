@@ -1,5 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { WalletProvider } from './context/WalletContext';
+import WalletGuard from './components/WalletGuard';
+
 import Home from './pages/Home';
 import Concerts from './pages/Concerts';
 import Singers from './pages/Singers';
@@ -27,33 +30,39 @@ import './index.css';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/concerts" element={<Concerts />} />
-        <Route path="/singers" element={<Singers />} />
-        <Route path="/blogs" element={<Blogs />} />
-        <Route path="/blog/:id" element={<BlogDetail />} />
-        <Route path="/faq" element={<FAQ />} />
-        <Route path="/contact" element={<ContactUs />} />
-        <Route path="/reservation" element={<Reservation />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/ticket" element={<DownloadTicket />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/account" element={<Account />} />
-        <Route path="/search" element={<SearchResults />} />
-        <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
-        <Route path="/create-event" element={<CreateEvent />} />
-        <Route path="/my-tickets" element={<MyTickets />} />
-        <Route path="/resale-market" element={<ResaleMarket />} />
-        <Route path="/ticket-verification" element={<TicketVerification />} />
-        <Route path="/mint-success" element={<MintSuccess />} />
-        <Route path="/transaction-history" element={<TransactionHistory />} />
-        <Route path="/event/:id" element={<EventDetail />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+    <WalletProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/concerts" element={<Concerts />} />
+          <Route path="/singers" element={<Singers />} />
+          <Route path="/blogs" element={<Blogs />} />
+          <Route path="/blog/:id" element={<BlogDetail />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route path="/search" element={<SearchResults />} />
+          <Route path="/event/:id" element={<EventDetail />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/resale-market" element={<ResaleMarket />} />
+
+          {/* Wallet-protected routes */}
+          <Route path="/reservation" element={<WalletGuard><Reservation /></WalletGuard>} />
+          <Route path="/checkout" element={<WalletGuard><Checkout /></WalletGuard>} />
+          <Route path="/ticket" element={<WalletGuard><DownloadTicket /></WalletGuard>} />
+          <Route path="/mint-success" element={<WalletGuard><MintSuccess /></WalletGuard>} />
+          <Route path="/my-tickets" element={<WalletGuard><MyTickets /></WalletGuard>} />
+          <Route path="/account" element={<WalletGuard><Account /></WalletGuard>} />
+          <Route path="/transaction-history" element={<WalletGuard><TransactionHistory /></WalletGuard>} />
+          <Route path="/organizer-dashboard" element={<WalletGuard><OrganizerDashboard /></WalletGuard>} />
+          <Route path="/create-event" element={<WalletGuard><CreateEvent /></WalletGuard>} />
+          <Route path="/ticket-verification" element={<WalletGuard><TicketVerification /></WalletGuard>} />
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </WalletProvider>
   );
 }
 
