@@ -60,7 +60,7 @@ export const WalletProvider = ({ children }) => {
 
   const switchNetwork = useCallback(async () => {
     if (!window.ethereum) return;
-    const hexChainId = '0x' + CHAIN_ID.toString(16);
+    const hexChainId = '0x' + CHAIN_ID.toString(16); // 0x539 for 1337
     try {
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
@@ -68,19 +68,20 @@ export const WalletProvider = ({ children }) => {
       });
     } catch (err) {
       if (err.code === 4902) {
+        // Chain not in MetaMask yet — add Hardhat Local
         try {
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: hexChainId,
-              chainName: 'Polygon Amoy Testnet',
-              nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-              rpcUrls: ['https://rpc-amoy.polygon.technology'],
-              blockExplorerUrls: ['https://amoy.polygonscan.com'],
+              chainName: 'Hardhat Local',
+              nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['http://127.0.0.1:8545'],
+              blockExplorerUrls: [],
             }],
           });
         } catch (addErr) {
-          setError('Failed to add network: ' + addErr.message);
+          setError('Failed to add Hardhat Local network: ' + addErr.message);
         }
       } else {
         setError('Failed to switch network: ' + err.message);
