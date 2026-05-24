@@ -105,7 +105,48 @@ const Checkout = () => {
       const priceWei = onChainPrice ?? ethers.parseEther('0.01');
 
       const seat = selectedSeats[0];
-      const tokenURI = buildTokenURI(seat, 'Taylor Swift: The Eras Tour', 'June 04, 2026');
+      const seatLabel = `Section ${seat.split('-')[0].replace('S','')}, Row ${seat.split('-')[1]}, Seat ${seat.split('-')[2]}`;
+
+      // ── Step 1: Upload metadata to IPFS via Pinata ──────────────────────
+      setToast({ status: 'pending', message: 'Uploading ticket metadata to IPFS…' });
+
+      let tokenURI;
+      let ipfsCID = '';
+      try {
+        const ipfsRes = await fetch('http://localhost:5000/api/ipfs/upload-metadata', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: `BlockTicket - Taylor Swift: The Eras Tour`,
+            description: `Official NFT ticket for Taylor Swift: The Eras Tour on June 04, 2026. Seat: ${seatLabel}.`,
+            image: 'https://upload.wikimedia.org/wikipedia/en/f/f6/Taylor_Swift_-_Fearless.png',
+            event: 'Taylor Swift: The Eras Tour',
+            date: 'June 04, 2026',
+            seat: seatLabel,
+            attributes: [
+              { trait_type: 'Event', value: 'Taylor Swift: The Eras Tour' },
+              { trait_type: 'Venue', value: 'Royal Albert Hall' },
+              { trait_type: 'Date', value: 'June 04, 2026' },
+              { trait_type: 'Seat', value: seatLabel },
+              { trait_type: 'Category', value: 'VIP' },
+            ],
+          }),
+        });
+        const ipfsData = await ipfsRes.json();
+        if (ipfsData.success) {
+          tokenURI = ipfsData.tokenURI;   // ipfs://CID
+          ipfsCID = ipfsData.cid;
+        } else {
+          throw new Error('IPFS upload failed: ' + ipfsData.message);
+        }
+      } catch (ipfsErr) {
+        // Fall back to data URI if backend/Pinata is unavailable
+        console.warn('IPFS upload failed, using data URI fallback:', ipfsErr.message);
+        tokenURI = buildTokenURI(seat, 'Taylor Swift: The Eras Tour', 'June 04, 2026');
+      }
+
+      // ── Step 2: Mint NFT on-chain ────────────────────────────────────────
+      setToast({ status: 'pending', message: 'Confirm transaction in MetaMask…' });
 
       const tx = await nftWrite.mintTicket(tokenURI, { value: priceWei });
 
@@ -128,15 +169,22 @@ const Checkout = () => {
 
       setToast({ status: 'success', message: 'NFT ticket minted successfully!', txHash: tx.hash });
 
-      // Record in backend (fire-and-forget)
+      // ── Step 3: Record in MongoDB ────────────────────────────────────────
       fetch('http://localhost:5000/api/tickets/mint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tokenId, owner: account, transactionHash: tx.hash, seat }),
-      }).catch(() => {});
+        body: JSON.stringify({
+          tokenId,
+          owner: account,
+          transactionHash: tx.hash,
+          seat: seatLabel,
+          ipfsMetadataCID: ipfsCID,
+          tokenURI,
+        }),
+      }).catch(() => { /* non-blocking */ });
 
       setTimeout(() => {
-        navigate('/mint-success', { state: { tokenId, txHash: tx.hash, seat } });
+        navigate('/mint-success', { state: { tokenId, txHash: tx.hash, seat: seatLabel, ipfsCID, tokenURI } });
       }, 1500);
 
     } catch (err) {
