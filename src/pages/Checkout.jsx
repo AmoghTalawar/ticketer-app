@@ -8,7 +8,7 @@ import TransactionToast from '../components/TransactionToast';
 import { useContract } from '../hooks/useContract';
 import { useWallet } from '../context/WalletContext';
 import { CONCERT_IMAGES } from '../constants/images';
-import { CHAIN_ID } from '../contracts/addresses';
+import { CHAIN_ID, CONTRACT_ADDRESSES } from '../contracts/addresses';
 
 // Build a minimal on-chain metadata URI for the ticket
 // In production this would be an IPFS CID from Pinata
@@ -72,8 +72,16 @@ const Checkout = () => {
       alert('Wallet not connected. Please connect MetaMask first.');
       return;
     }
-    if (isWrongNetwork) {
-      setToast({ status: 'error', message: `Wrong network. Please switch to the correct network (Chain ID ${CHAIN_ID}).` });
+
+    // Check network via MetaMask directly — most reliable source
+    const metamaskChainId = parseInt(
+      await window.ethereum.request({ method: 'eth_chainId' }), 16
+    );
+    if (metamaskChainId !== CHAIN_ID) {
+      setToast({
+        status: 'error',
+        message: `Wrong network (Chain ID ${metamaskChainId}). Please switch MetaMask to Hardhat Local (Chain ID ${CHAIN_ID} — localhost:8545).`,
+      });
       return;
     }
 
@@ -81,13 +89,14 @@ const Checkout = () => {
     setToast({ status: 'pending', message: 'Waiting for MetaMask confirmation…' });
 
     try {
-      // Pre-flight: verify the contract is actually deployed at this address.
-      // Returns '0x' if the Hardhat node was restarted without redeploying.
-      const contractAddress = await nftWrite.getAddress();
-      const code = await nftWrite.runner.provider.getCode(contractAddress);
+      // Pre-flight: use nftRead (Hardhat JSON-RPC, not MetaMask) to verify
+      // the contract exists. nftWrite.runner.provider is MetaMask which may
+      // be on a different network even after the chain ID check above.
+      const contractAddress = CONTRACT_ADDRESSES.TicketNFT;
+      const code = await nftRead.runner.provider.getCode(contractAddress);
       if (code === '0x') {
         throw new Error(
-          'Contract not found — the Hardhat node was likely restarted. ' +
+          'Contract not found on localhost. ' +
           'Run: npx hardhat run scripts/deploy.js --network localhost'
         );
       }
@@ -280,11 +289,11 @@ const Checkout = () => {
 
             <button
               className="btn btn-primary"
-              style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', opacity: (minting || isWrongNetwork) ? 0.7 : 1, cursor: (minting || isWrongNetwork) ? 'not-allowed' : 'pointer' }}
+              style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', opacity: minting ? 0.7 : 1, cursor: minting ? 'not-allowed' : 'pointer' }}
               onClick={handleMint}
-              disabled={minting || isWrongNetwork}
+              disabled={minting}
             >
-              {minting ? 'Minting…' : isWrongNetwork ? 'Switch Network to Mint' : `Mint NFT Ticket (${onChainPrice ? ethers.formatEther(onChainPrice) : '0.01'} ETH)`}
+              {minting ? 'Minting…' : `Mint NFT Ticket (${onChainPrice ? ethers.formatEther(onChainPrice) : '0.01'} ETH)`}
             </button>
 
             <p style={{ textAlign: 'center', color: '#888', fontSize: '0.85rem', marginTop: '1rem' }}>
