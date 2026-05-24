@@ -14,7 +14,7 @@ import { CHAIN_ID } from '../contracts/addresses';
 // In production this would be an IPFS CID from Pinata
 const buildTokenURI = (seat, eventName, date) => {
   const metadata = {
-    name: `BlockTicket — ${eventName}`,
+    name: `BlockTicket - ${eventName}`,
     description: `Official NFT ticket for ${eventName} on ${date}. Seat: ${seat}.`,
     image: 'https://via.placeholder.com/400x400?text=BlockTicket',
     attributes: [
@@ -23,8 +23,11 @@ const buildTokenURI = (seat, eventName, date) => {
       { trait_type: 'Seat', value: seat },
     ],
   };
-  // Encode as a data URI so it works without IPFS in local dev
-  return 'data:application/json;base64,' + btoa(JSON.stringify(metadata));
+  // btoa() only handles Latin-1 — use TextEncoder for full UTF-8 safety
+  const json = JSON.stringify(metadata);
+  const bytes = new TextEncoder().encode(json);
+  const binary = Array.from(bytes).map(b => String.fromCharCode(b)).join('');
+  return 'data:application/json;base64,' + btoa(binary);
 };
 
 const Checkout = () => {

@@ -14,7 +14,11 @@ import TicketNFTAbi from '../contracts/TicketNFT.json';
 const fetchMetadata = async (tokenURI) => {
   try {
     if (tokenURI.startsWith('data:application/json;base64,')) {
-      const json = atob(tokenURI.replace('data:application/json;base64,', ''));
+      const base64 = tokenURI.replace('data:application/json;base64,', '');
+      // Use TextDecoder for UTF-8 safe decoding
+      const binary = atob(base64);
+      const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+      const json = new TextDecoder().decode(bytes);
       return JSON.parse(json);
     }
     if (tokenURI.startsWith('ipfs://')) {
