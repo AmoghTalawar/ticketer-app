@@ -34,6 +34,7 @@ app.get('/health', (req, res) => {
     message: '🚀 BlockTicket API is running',
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV || 'development',
+    pinata: !!process.env.PINATA_JWT,
   });
 });
 
@@ -60,11 +61,20 @@ app.use((err, req, res, next) => {
 
 // ─── Start Server ─────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\n🎫 BlockTicket Backend`);
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📡 Health: http://localhost:${PORT}/health`);
   console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}\n`);
+
+  // Test Pinata connection on startup
+  try {
+    const { testConnection } = require('./config/pinata');
+    await testConnection();
+    console.log('📌 Pinata: Connected ✅');
+  } catch (err) {
+    console.warn('📌 Pinata: Connection failed ⚠ —', err.message);
+  }
 });
 
 module.exports = app;
