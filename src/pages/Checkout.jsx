@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { ethers } from 'ethers';
@@ -8,6 +8,7 @@ import TransactionToast from '../components/TransactionToast';
 import { useContract } from '../hooks/useContract';
 import { useWallet } from '../context/WalletContext';
 import { CONCERT_IMAGES } from '../constants/images';
+import { CHAIN_ID } from '../contracts/addresses';
 
 // Build a minimal on-chain metadata URI for the ticket
 // In production this would be an IPFS CID from Pinata
@@ -30,7 +31,7 @@ const Checkout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { nftWrite } = useContract();
-  const { account } = useWallet();
+  const { account, chainId, switchNetwork } = useWallet();
 
   const selectedSeats = location.state?.selectedSeats || ['S1-0-1'];
   const ticketPrice = 399.00;
@@ -38,11 +39,26 @@ const Checkout = () => {
   const serviceFee = location.state?.serviceFee || selectedSeats.length * 1.00;
   const total = location.state?.total || subtotal + serviceFee;
 
-  const [toast, setToast] = useState(null); // { status, message, txHash }
+  const [toast, setToast] = useState(null);
   const [minting, setMinting] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [onChainPrice, setOnChainPrice] = useState(null); // fetched once on mount
 
+  const isWrongNetwork = chainId !== CHAIN_ID;
   const closeToast = () => setToast(null);
+
+  // Fetch ticket price from contract using the READ provider (no signer needed)
+  const { nftRead } = useContract();
+  useEffect(() => {
+    if (!nftRead) return;
+    nftRead.ticketPrice()
+      .then(p => setOnChainPrice(p))
+      .catch(err => {
+        console.warn('Could not fetch ticketPrice from contract:', err.message);
+        // Fall back to the known deploy price: 0.01 ETH
+        setOnChainPrice(ethers.parseEther('0.01'));
+      });
+  }, [nftRead]);
 
   const handleMint = async () => {
     if (!agreed) {
@@ -50,7 +66,11 @@ const Checkout = () => {
       return;
     }
     if (!nftWrite) {
-      alert('Wallet not connected or contract not loaded.');
+      alert('Wallet not connected. Please connect MetaMask first.');
+      return;
+    }
+    if (isWrongNetwork) {
+      setToast({ status: 'error', message: `Wrong network. Please switch to the correct network (Chain ID ${CHAIN_ID}).` });
       return;
     }
 
@@ -58,18 +78,15 @@ const Checkout = () => {
     setToast({ status: 'pending', message: 'Waiting for MetaMask confirmation…' });
 
     try {
-      // Fetch the ticket price from the contract (in wei)
-      const priceWei = await nftWrite.ticketPrice();
+      // Use fetched price or fall back to 0.01 ETH
+      const priceWei = onChainPrice ?? ethers.parseEther('0.01');
 
-      // Build token URI for the first seat (one mint per checkout for simplicity)
       const seat = selectedSeats[0];
       const tokenURI = buildTokenURI(seat, 'Taylor Swift: The Eras Tour', 'June 04, 2026');
 
-      setToast({ status: 'pending', message: 'Transaction submitted — mining…' });
-
       const tx = await nftWrite.mintTicket(tokenURI, { value: priceWei });
 
-      setToast({ status: 'pending', message: 'Waiting for confirmation…', txHash: tx.hash });
+      setToast({ status: 'pending', message: 'Transaction submitted — waiting for confirmation…', txHash: tx.hash });
 
       const receipt = await tx.wait();
 
@@ -88,28 +105,24 @@ const Checkout = () => {
 
       setToast({ status: 'success', message: 'NFT ticket minted successfully!', txHash: tx.hash });
 
-      // Record in backend (fire-and-forget — don't block navigation)
+      // Record in backend (fire-and-forget)
       fetch('http://localhost:5000/api/tickets/mint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tokenId,
-          owner: account,
-          transactionHash: tx.hash,
-          seat,
-        }),
-      }).catch(() => { /* backend optional in local dev */ });
+        body: JSON.stringify({ tokenId, owner: account, transactionHash: tx.hash, seat }),
+      }).catch(() => {});
 
-      // Navigate to success page after short delay
       setTimeout(() => {
-        navigate('/mint-success', {
-          state: { tokenId, txHash: tx.hash, seat },
-        });
+        navigate('/mint-success', { state: { tokenId, txHash: tx.hash, seat } });
       }, 1500);
 
     } catch (err) {
       console.error('Mint error:', err);
-      const msg = err?.reason || err?.message || 'Transaction failed';
+      // Surface a readable message
+      const msg = err?.reason
+        ?? err?.data?.message
+        ?? err?.message
+        ?? 'Transaction failed or was rejected';
       setToast({ status: 'error', message: msg });
     } finally {
       setMinting(false);
@@ -204,10 +217,28 @@ const Checkout = () => {
           <div style={{ flex: '1', background: '#fff', borderRadius: '16px', padding: '3rem 2rem', boxShadow: 'var(--shadow-sm)' }}>
             <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111', marginBottom: '2rem' }}>Mint NFT Ticket</h3>
 
+            {/* Wrong network warning */}
+            {isWrongNetwork && (
+              <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: '10px', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                <span style={{ color: '#856404', fontSize: '0.9rem', fontWeight: '600' }}>
+                  ⚠ Wrong network. Switch to Chain ID {CHAIN_ID} (Hardhat Local).
+                </span>
+                <button
+                  onClick={switchNetwork}
+                  style={{ background: '#856404', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', cursor: 'pointer', fontWeight: '700', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                >
+                  Switch
+                </button>
+              </div>
+            )}
+
             {/* Wallet info */}
             <div style={{ background: '#f8f9fa', borderRadius: '12px', padding: '1rem 1.5rem', marginBottom: '2rem', fontSize: '0.9rem' }}>
               <div style={{ color: '#888', marginBottom: '0.25rem' }}>Connected Wallet</div>
               <div style={{ fontFamily: 'monospace', fontWeight: '600', color: '#111', wordBreak: 'break-all' }}>{account}</div>
+              <div style={{ color: '#888', marginTop: '0.5rem', fontSize: '0.8rem' }}>
+                Ticket price: <strong style={{ color: '#111' }}>{onChainPrice ? ethers.formatEther(onChainPrice) + ' ETH' : 'loading…'}</strong>
+              </div>
             </div>
 
             {/* What happens */}
@@ -235,11 +266,11 @@ const Checkout = () => {
 
             <button
               className="btn btn-primary"
-              style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', opacity: minting ? 0.7 : 1, cursor: minting ? 'not-allowed' : 'pointer' }}
+              style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', opacity: (minting || isWrongNetwork) ? 0.7 : 1, cursor: (minting || isWrongNetwork) ? 'not-allowed' : 'pointer' }}
               onClick={handleMint}
-              disabled={minting}
+              disabled={minting || isWrongNetwork}
             >
-              {minting ? 'Minting…' : 'Mint NFT Ticket (0.01 ETH)'}
+              {minting ? 'Minting…' : isWrongNetwork ? 'Switch Network to Mint' : `Mint NFT Ticket (${onChainPrice ? ethers.formatEther(onChainPrice) : '0.01'} ETH)`}
             </button>
 
             <p style={{ textAlign: 'center', color: '#888', fontSize: '0.85rem', marginTop: '1rem' }}>
