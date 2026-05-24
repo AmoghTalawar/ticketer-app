@@ -81,6 +81,17 @@ const Checkout = () => {
     setToast({ status: 'pending', message: 'Waiting for MetaMask confirmation…' });
 
     try {
+      // Pre-flight: verify the contract is actually deployed at this address.
+      // Returns '0x' if the Hardhat node was restarted without redeploying.
+      const contractAddress = await nftWrite.getAddress();
+      const code = await nftWrite.runner.provider.getCode(contractAddress);
+      if (code === '0x') {
+        throw new Error(
+          'Contract not found — the Hardhat node was likely restarted. ' +
+          'Run: npx hardhat run scripts/deploy.js --network localhost'
+        );
+      }
+
       // Use fetched price or fall back to 0.01 ETH
       const priceWei = onChainPrice ?? ethers.parseEther('0.01');
 
