@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { upload, uploadImage, uploadMetadataHandler, getMetadata } = require('../controllers/ipfs.controller');
-const { protect } = require('../middleware/auth.middleware');
+const { upload, uploadImage, uploadMetadataHandler, getMetadata, testPinata } = require('../controllers/ipfs.controller');
 
-router.post('/upload-image', protect, upload.single('image'), uploadImage);
-router.post('/upload-metadata', protect, uploadMetadataHandler);
+// No auth required for local dev — add protect middleware in production
+router.get('/test', testPinata);
+router.post('/upload-image', upload.single('image'), uploadImage);
+router.post('/upload-metadata', uploadMetadataHandler);
 router.get('/metadata/:cid', getMetadata);
 
 module.exports = router;

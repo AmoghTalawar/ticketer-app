@@ -8,16 +8,16 @@ const {
   buyResale,
   delistResale,
   getResaleListings,
+  markUsed,
 } = require('../controllers/ticket.controller');
-const { protect } = require('../middleware/auth.middleware');
 
-router.get('/resale', getResaleListings);          // Public: all resale listings
-router.get('/my', protect, getMyTickets);           // Auth: user's own tickets
-router.get('/:tokenId', getTicket);                 // Public: single ticket by tokenId
-
-router.post('/mint', protect, recordMint);          // Auth: record a mint
-router.post('/list-resale', protect, listForResale);
-router.post('/buy-resale', protect, buyResale);
-router.delete('/delist/:tokenId', protect, delistResale);
+router.post('/mint', recordMint);
+router.get('/my', getMyTickets);
+router.get('/resale', getResaleListings);
+router.post('/list-resale', listForResale);
+router.post('/buy-resale', buyResale);
+router.post('/mark-used', markUsed);
+router.delete('/delist/:tokenId', delistResale);
+router.get('/:tokenId', getTicket);
 
 module.exports = router;

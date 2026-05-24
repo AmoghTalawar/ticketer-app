@@ -2,9 +2,10 @@ const axios = require('axios');
 
 const PINATA_BASE_URL = 'https://api.pinata.cloud';
 
+// Use JWT auth — more reliable than API key/secret pair
 const pinataHeaders = () => ({
-  pinata_api_key: process.env.PINATA_API_KEY,
-  pinata_secret_api_key: process.env.PINATA_SECRET_KEY,
+  Authorization: `Bearer ${process.env.PINATA_JWT}`,
+  'Content-Type': 'application/json',
 });
 
 /**
@@ -19,6 +20,7 @@ const uploadMetadata = async (metadata, name = 'BlockTicket Metadata') => {
     {
       pinataContent: metadata,
       pinataMetadata: { name },
+      pinataOptions: { cidVersion: 1 },
     },
     { headers: pinataHeaders() }
   );
@@ -36,6 +38,7 @@ const uploadFile = async (buffer, filename) => {
   const form = new FormData();
   form.append('file', buffer, { filename });
   form.append('pinataMetadata', JSON.stringify({ name: filename }));
+  form.append('pinataOptions', JSON.stringify({ cidVersion: 1 }));
 
   const response = await axios.post(
     `${PINATA_BASE_URL}/pinning/pinFileToIPFS`,
@@ -43,12 +46,24 @@ const uploadFile = async (buffer, filename) => {
     {
       headers: {
         ...form.getHeaders(),
-        ...pinataHeaders(),
+        Authorization: `Bearer ${process.env.PINATA_JWT}`,
       },
       maxContentLength: Infinity,
+      maxBodyLength: Infinity,
     }
   );
   return response.data.IpfsHash;
 };
 
-module.exports = { uploadMetadata, uploadFile };
+/**
+ * Test Pinata connection
+ */
+const testConnection = async () => {
+  const response = await axios.get(
+    `${PINATA_BASE_URL}/data/testAuthentication`,
+    { headers: pinataHeaders() }
+  );
+  return response.data;
+};
+
+module.exports = { uploadMetadata, uploadFile, testConnection };

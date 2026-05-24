@@ -3,36 +3,30 @@ const mongoose = require('mongoose');
 const ticketSchema = new mongoose.Schema(
   {
     tokenId: {
-      type: Number,
+      type: String,   // string to handle large BigInt values safely
       required: true,
-    },
-    eventId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Event',
-      required: true,
+      unique: true,
     },
     owner: {
-      type: String, // wallet address
+      type: String,   // wallet address (lowercase)
       required: true,
       lowercase: true,
-    },
-    mintedAt: {
-      type: Date,
-      default: Date.now,
     },
     transactionHash: {
       type: String,
       required: true,
     },
     seatInfo: {
-      block: String,
-      row: String,
-      seat: String,
-      category: {
-        type: String,
-        enum: ['VIP', 'Gold', 'Silver', 'General'],
-        default: 'General',
-      },
+      type: String,   // e.g. "Section 1, Row 0, Seat 1"
+      default: '',
+    },
+    ipfsMetadataCID: {
+      type: String,
+      default: '',
+    },
+    tokenURI: {
+      type: String,   // full tokenURI (ipfs:// or data:)
+      default: '',
     },
     isUsed: {
       type: Boolean,
@@ -46,19 +40,14 @@ const ticketSchema = new mongoose.Schema(
       default: false,
     },
     resalePrice: {
-      type: String, // in MATIC
+      type: String,   // in ETH/MATIC as string
     },
-    ipfsMetadataCID: {
-      type: String,
-    },
-    burnTransactionHash: {
-      type: String,
+    mintedAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   { timestamps: true }
 );
-
-// Compound index: each tokenId is unique per event contract
-ticketSchema.index({ tokenId: 1, eventId: 1 }, { unique: true });
 
 module.exports = mongoose.model('Ticket', ticketSchema);
