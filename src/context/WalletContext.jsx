@@ -15,6 +15,7 @@ export const WalletProvider = ({ children }) => {
   const [chainId, setChainId] = useState(null);
   const [provider, setProvider] = useState(null);
   const [signer, setSigner] = useState(null);
+  const [user, setUser] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -27,6 +28,16 @@ export const WalletProvider = ({ children }) => {
     return { p, s, chainId: Number(network.chainId) };
   };
 
+  const disconnect = useCallback(() => {
+    setAccount(null);
+    setProvider(null);
+    setSigner(null);
+    setChainId(null);
+    setUser(null);
+    setError(null);
+    localStorage.removeItem('blockticket_token');
+  }, []);
+
   const connect = useCallback(async () => {
     if (!window.ethereum) {
       setError('MetaMask is not installed. Please install it from metamask.io');
@@ -37,26 +48,47 @@ export const WalletProvider = ({ children }) => {
     try {
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       const { p, s, chainId: cid } = await _buildProvider();
-      setAccount(accounts[0].toLowerCase());
+      const walletAddress = accounts[0].toLowerCase();
+
+      // SIWE Flow:
+      // 1. Get Nonce
+      const nonceRes = await fetch('http://localhost:5000/api/auth/nonce', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress }),
+      });
+      const nonceData = await nonceRes.json();
+      if (!nonceData.success) throw new Error(nonceData.message || 'Failed to get nonce');
+
+      // 2. Sign Message
+      const signature = await s.signMessage(nonceData.message);
+
+      // 3. Verify Wallet
+      const verifyRes = await fetch('http://localhost:5000/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress, signature }),
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyData.success) throw new Error(verifyData.message || 'Signature verification failed');
+
+      // Save JWT token in local storage
+      localStorage.setItem('blockticket_token', verifyData.token);
+
+      setAccount(walletAddress);
       setProvider(p);
       setSigner(s);
       setChainId(cid);
+      setUser(verifyData.user);
       return true;
     } catch (err) {
       setError(err.message || 'Failed to connect wallet');
+      disconnect();
       return false;
     } finally {
       setConnecting(false);
     }
-  }, []);
-
-  const disconnect = useCallback(() => {
-    setAccount(null);
-    setProvider(null);
-    setSigner(null);
-    setChainId(null);
-    setError(null);
-  }, []);
+  }, [disconnect]);
 
   const switchNetwork = useCallback(async () => {
     if (!window.ethereum) return;
@@ -92,15 +124,32 @@ export const WalletProvider = ({ children }) => {
   // Auto-reconnect on page load
   useEffect(() => {
     if (!window.ethereum) return;
+    const token = localStorage.getItem('blockticket_token');
+
     window.ethereum.request({ method: 'eth_accounts' }).then(async (accounts) => {
-      if (accounts.length > 0) {
+      if (accounts.length > 0 && token) {
         try {
           const { p, s, chainId: cid } = await _buildProvider();
-          setAccount(accounts[0].toLowerCase());
-          setProvider(p);
-          setSigner(s);
-          setChainId(cid);
-        } catch (_) {}
+          const walletAddress = accounts[0].toLowerCase();
+
+          const res = await fetch('http://localhost:5000/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (data.success && data.user.walletAddress.toLowerCase() === walletAddress) {
+            setAccount(walletAddress);
+            setProvider(p);
+            setSigner(s);
+            setChainId(cid);
+            setUser(data.user);
+          } else {
+            localStorage.removeItem('blockticket_token');
+          }
+        } catch (_) {
+          localStorage.removeItem('blockticket_token');
+        }
+      } else {
+        localStorage.removeItem('blockticket_token');
       }
     });
   }, []);
@@ -110,12 +159,7 @@ export const WalletProvider = ({ children }) => {
     if (!window.ethereum) return;
 
     const onAccountsChanged = (accounts) => {
-      if (accounts.length === 0) {
-        disconnect();
-      } else {
-        setAccount(accounts[0].toLowerCase());
-        _buildProvider().then(({ p, s }) => { setProvider(p); setSigner(s); }).catch(() => {});
-      }
+      disconnect();
     };
 
     const onChainChanged = (hexChainId) => {
@@ -136,6 +180,8 @@ export const WalletProvider = ({ children }) => {
     chainId,
     provider,
     signer,
+    user,
+    setUser,
     connecting,
     error,
     isConnected: !!account,

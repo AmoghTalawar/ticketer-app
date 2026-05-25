@@ -3,6 +3,11 @@
     {
       "inputs": [
         {
+          "internalType": "address payable",
+          "name": "nftContractAddress",
+          "type": "address"
+        },
+        {
           "internalType": "uint256",
           "name": "platformFee_",
           "type": "uint256"
@@ -94,12 +99,6 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "address",
-          "name": "nftContract",
-          "type": "address"
-        },
-        {
-          "indexed": true,
           "internalType": "uint256",
           "name": "tokenId",
           "type": "uint256"
@@ -119,12 +118,6 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "address",
-          "name": "nftContract",
-          "type": "address"
-        },
-        {
-          "indexed": true,
           "internalType": "uint256",
           "name": "tokenId",
           "type": "uint256"
@@ -142,12 +135,6 @@
     {
       "anonymous": false,
       "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "nftContract",
-          "type": "address"
-        },
         {
           "indexed": true,
           "internalType": "uint256",
@@ -175,12 +162,6 @@
       "inputs": [
         {
           "indexed": true,
-          "internalType": "address",
-          "name": "nftContract",
-          "type": "address"
-        },
-        {
-          "indexed": true,
           "internalType": "uint256",
           "name": "tokenId",
           "type": "uint256"
@@ -192,7 +173,7 @@
           "type": "address"
         },
         {
-          "indexed": false,
+          "indexed": true,
           "internalType": "address",
           "name": "seller",
           "type": "address"
@@ -210,11 +191,6 @@
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "nftContractAddress",
-          "type": "address"
-        },
-        {
           "internalType": "uint256",
           "name": "tokenId",
           "type": "uint256"
@@ -228,11 +204,6 @@
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "nftContractAddress",
-          "type": "address"
-        },
-        {
           "internalType": "uint256",
           "name": "tokenId",
           "type": "uint256"
@@ -244,13 +215,7 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "nftContractAddress",
-          "type": "address"
-        }
-      ],
+      "inputs": [],
       "name": "getActiveListings",
       "outputs": [
         {
@@ -264,11 +229,6 @@
     },
     {
       "inputs": [
-        {
-          "internalType": "address",
-          "name": "nftContractAddress",
-          "type": "address"
-        },
         {
           "internalType": "uint256",
           "name": "tokenId",
@@ -306,11 +266,6 @@
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "nftContractAddress",
-          "type": "address"
-        },
-        {
           "internalType": "uint256",
           "name": "tokenId",
           "type": "uint256"
@@ -328,11 +283,6 @@
     },
     {
       "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
         {
           "internalType": "uint256",
           "name": "",
@@ -355,6 +305,19 @@
           "internalType": "bool",
           "name": "active",
           "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "nftContract",
+      "outputs": [
+        {
+          "internalType": "contract TicketNFT",
+          "name": "",
+          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -421,11 +384,6 @@
     },
     {
       "inputs": [
-        {
-          "internalType": "address",
-          "name": "nftContractAddress",
-          "type": "address"
-        },
         {
           "internalType": "uint256",
           "name": "tokenId",

@@ -115,14 +115,14 @@ const DownloadTicket = () => {
             </button>
             <Link
               to="/my-tickets"
-              className="btn btn-outline"
+              className="btn btn-outline-dark"
               style={{ padding: '0.75rem 2rem', fontWeight: 'bold', textDecoration: 'none' }}
             >
               My Tickets
             </Link>
             <Link
               to="/account"
-              className="btn btn-outline"
+              className="btn btn-outline-dark"
               style={{ padding: '0.75rem 2rem', fontWeight: 'bold', textDecoration: 'none' }}
             >
               My Hub

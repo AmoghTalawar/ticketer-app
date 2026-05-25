@@ -48,16 +48,16 @@ function App() {
           <Route path="/resale-market" element={<ResaleMarket />} />
 
           {/* Wallet-protected routes */}
-          <Route path="/reservation" element={<WalletGuard><Reservation /></WalletGuard>} />
-          <Route path="/checkout" element={<WalletGuard><Checkout /></WalletGuard>} />
-          <Route path="/ticket" element={<WalletGuard><DownloadTicket /></WalletGuard>} />
-          <Route path="/mint-success" element={<WalletGuard><MintSuccess /></WalletGuard>} />
-          <Route path="/my-tickets" element={<WalletGuard><MyTickets /></WalletGuard>} />
-          <Route path="/account" element={<WalletGuard><Account /></WalletGuard>} />
-          <Route path="/transaction-history" element={<WalletGuard><TransactionHistory /></WalletGuard>} />
-          <Route path="/organizer-dashboard" element={<WalletGuard><OrganizerDashboard /></WalletGuard>} />
-          <Route path="/create-event" element={<WalletGuard><CreateEvent /></WalletGuard>} />
-          <Route path="/ticket-verification" element={<WalletGuard><TicketVerification /></WalletGuard>} />
+          <Route path="/reservation" element={<WalletGuard allowedRoles={['user']}><Reservation /></WalletGuard>} />
+          <Route path="/checkout" element={<WalletGuard allowedRoles={['user']}><Checkout /></WalletGuard>} />
+          <Route path="/ticket" element={<WalletGuard allowedRoles={['user']}><DownloadTicket /></WalletGuard>} />
+          <Route path="/mint-success" element={<WalletGuard allowedRoles={['user']}><MintSuccess /></WalletGuard>} />
+          <Route path="/my-tickets" element={<WalletGuard allowedRoles={['user']}><MyTickets /></WalletGuard>} />
+          <Route path="/account" element={<WalletGuard allowedRoles={['user']}><Account /></WalletGuard>} />
+          <Route path="/transaction-history" element={<WalletGuard allowedRoles={['user']}><TransactionHistory /></WalletGuard>} />
+          <Route path="/organizer-dashboard" element={<WalletGuard allowedRoles={['organizer']}><OrganizerDashboard /></WalletGuard>} />
+          <Route path="/create-event" element={<WalletGuard allowedRoles={['organizer']}><CreateEvent /></WalletGuard>} />
+          <Route path="/ticket-verification" element={<WalletGuard allowedRoles={['organizer']}><TicketVerification /></WalletGuard>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,0 +1,22 @@
+{
+  "network": "localhost",
+  "chainId": "1337",
+  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "deployedAt": "2026-05-25T14:41:43.113Z",
+  "contracts": {
+    "TicketMarketplace": {
+      "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+      "platformFeePercent": 2
+    },
+    "EventFactory": {
+      "address": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
+    },
+    "DefaultTicketNFT": {
+      "address": "0x856e4424f806D16E8CBC702B3c0F2ede5468eae5",
+      "name": "BlockTicket - Taylor Swift Concert",
+      "maxSupply": 1000,
+      "ticketPrice": "0.01",
+      "resalePriceCap": 110
+    }
+  }
+}

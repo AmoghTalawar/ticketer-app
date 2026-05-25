@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Check, Trash2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -15,7 +15,24 @@ const isSeatReserved = (seatId) => {
 
 const Reservation = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Load event details passed from EventDetail, fallback to Taylor Swift default
+  const event = location.state?.event || {
+    _id: 'default',
+    title: 'Taylor Swift: The Eras Tour',
+    ticketPrice: '0.01',
+    date: '2026-06-04T20:00:00.000Z',
+    venue: 'Royal Albert Hall',
+    imageUrl: CONCERT_IMAGES.taylor_swift
+  };
+
   const [selectedSeats, setSelectedSeats] = useState([]);
+
+  const ticketPrice = parseFloat(event.ticketPrice || '0.01');
+  const subtotal = selectedSeats.length * ticketPrice;
+  const serviceFee = selectedSeats.length * (ticketPrice * 0.05); // 5% fee
+  const total = subtotal + serviceFee;
 
   // Generate a mock seat map layout (simplified grid for demonstration)
   const renderSeatRow = (rowId, numSeats, sectionOffset) => {
@@ -62,84 +79,71 @@ const Reservation = () => {
     setSelectedSeats(prev => prev.filter(s => s !== seatId));
   };
 
-  const ticketPrice = 399.00;
-  const subtotal = selectedSeats.length * ticketPrice;
-  const serviceFee = selectedSeats.length > 0 ? 1.00 * selectedSeats.length : 0;
-  const total = subtotal + serviceFee;
+  const formattedDate = new Date(event.date).toLocaleDateString('en-US', {
+    month: 'short', day: '2-digit', weekday: 'short'
+  });
+  const formattedTime = new Date(event.date).toLocaleTimeString('en-US', {
+    hour: 'numeric', minute: '2-digit'
+  });
 
   return (
-    <div style={{ backgroundColor: '#F8F9FA', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: '#F8F9FA', minHeight: '100vh', color: '#111' }}>
       <Navbar />
 
-      <main className="container" style={{ paddingTop: '8rem', paddingBottom: '4rem' }}>
+      <main className="container" style={{ paddingTop: '8rem', paddingBottom: '6rem' }}>
         
-        {/* Progress Bar */}
+        {/* Progress Tracker */}
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '3rem', maxWidth: '600px', margin: '0 auto 3rem auto' }}>
-           <div style={{ textAlign: 'center', flex: 1, position: 'relative' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', background: '#fff' }}><Check size={16} /></div>
-              <span style={{ fontSize: '0.8rem', color: '#111' }}>Choose Time</span>
-              <div style={{ position: 'absolute', top: '16px', right: '-50%', width: '100%', height: '1px', background: '#111' }}></div>
-           </div>
-           <div style={{ textAlign: 'center', flex: 1, position: 'relative' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', background: '#fff' }}>2</div>
-              <span style={{ fontSize: '0.8rem', color: '#111', fontWeight: 'bold' }}>Choose Seat</span>
-              <div style={{ position: 'absolute', top: '16px', right: '-50%', width: '100%', height: '1px', background: '#ddd' }}></div>
-           </div>
-           <div style={{ textAlign: 'center', flex: 1, position: 'relative' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', background: '#fff', color: '#888' }}>3</div>
-              <span style={{ fontSize: '0.8rem', color: '#888' }}>Checkout</span>
-              <div style={{ position: 'absolute', top: '16px', right: '-50%', width: '100%', height: '1px', background: '#ddd' }}></div>
-           </div>
-           <div style={{ textAlign: 'center', flex: 1 }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.5rem', background: '#fff', color: '#888' }}>4</div>
-              <span style={{ fontSize: '0.8rem', color: '#888' }}>Get Ticket</span>
-           </div>
+          {[
+            { label: 'Choose Time', done: true },
+            { label: 'Choose Seat', active: true },
+            { label: 'Checkout', done: false },
+            { label: 'Get Ticket', done: false },
+          ].map((step, i, arr) => (
+            <div key={step.label} style={{ textAlign: 'center', flex: 1, position: 'relative' }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                border: step.active ? '2px solid #111' : '1px solid ' + (step.done ? '#111' : '#ddd'),
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 0.5rem',
+                background: '#fff',
+                fontWeight: step.active ? 'bold' : 'normal',
+                color: step.done || step.active ? '#111' : '#888'
+              }}>
+                {step.done ? <Check size={16} /> : i + 1}
+              </div>
+              <span style={{ fontSize: '0.8rem', color: step.active ? '#111' : (step.done ? '#111' : '#888'), fontWeight: step.active ? 'bold' : 'normal' }}>
+                {step.label}
+              </span>
+              {i < arr.length - 1 && (
+                <div style={{ position: 'absolute', top: '16px', right: '-50%', width: '100%', height: '1px', background: step.done ? '#111' : '#ddd' }} />
+              )}
+            </div>
+          ))}
         </div>
 
-        {/* Concert Info */}
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#111' }}>Taylor Swift Concert "The Eras Tour"</h1>
-        
-        <img src={CONCERT_IMAGES.taylor_swift} alt="Concert" referrerPolicy="no-referrer" style={{ width: '100%', height: '300px', objectFit: 'cover', borderRadius: '16px', marginBottom: '1.5rem' }} />
-        
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#111' }}>The Eras Tour: Taylor Swift</h2>
-        <p style={{ color: '#555', marginBottom: '2rem' }}>Mon, June 04 . 08:00 pm . Royal Albert Hall.</p>
-
-        {/* Ticket Prices */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '3rem' }}>
-          <span style={{ fontSize: '1.2rem', color: '#111' }}>Ticket Price:</span>
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '0.5rem 1rem', background: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 'bold' }}>₹399</span> | <span style={{ color: '#555' }}>VIP tickets</span>
-            </div>
-            <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '0.5rem 1rem', background: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 'bold' }}>₹299</span> | <span style={{ color: '#555' }}>Standard tickets</span>
-            </div>
-            <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '0.5rem 1rem', background: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 'bold' }}>₹199</span> | <span style={{ color: '#555' }}>Economic tickets</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Seat Layout & Sidebar */}
-        <div style={{ display: 'flex', gap: '3rem', alignItems: 'flex-start' }}>
+        <div className="grid grid-cols-3 gap-8" style={{ alignItems: 'flex-start' }}>
            
-           {/* Seat Map Area */}
-           <div style={{ flex: '2', background: '#fff', borderRadius: '16px', padding: '2rem', boxShadow: 'var(--shadow-sm)' }}>
-              
-              {/* Stage */}
-              <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto 3rem auto', background: '#f5f5f5', padding: '1rem', textAlign: 'center', borderRadius: '8px', color: '#555', fontWeight: 'bold' }}>
-                Stage
+           {/* Seat Selector Grid */}
+           <div style={{ flex: '2', background: '#fff', padding: '2rem', borderRadius: '24px', boxShadow: 'var(--shadow-sm)' }} className="col-span-2">
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Select Your Seats</h2>
+              <p style={{ color: '#888', marginBottom: '2.5rem' }}>Click on the available seats to select them. Maximum 1 seat per transaction.</p>
+
+              {/* Stage layout */}
+              <div style={{ width: '80%', height: '24px', background: 'linear-gradient(to bottom, #d3d3d3, #eee)', border: '1px solid #ccc', margin: '0 auto 3rem auto', borderRadius: '0 0 24px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666', fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '2px' }}>
+                STAGE
               </div>
 
-              {/* Simplified Layouts for Sections */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginBottom: '2rem' }}>
-                 <div>
-                   {[10, 10, 10, 10, 10, 10, 10].map((num, i) => renderSeatRow(i, num, 1))}
-                   <div style={{ textAlign: 'center', marginTop: '1rem', color: '#555' }}>Section 1</div>
-                 </div>
+              {/* Seats Grid */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
+                  {/* Central Block */}
+                  <div>
+                    {[10, 10, 10, 10, 10].map((num, i) => renderSeatRow(i, num, 1))}
+                    <div style={{ textAlign: 'center', marginTop: '1rem', color: '#555', fontWeight: '600' }}>Main Hall (Section 1)</div>
+                  </div>
               </div>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '2rem', marginTop: '2rem' }}>
                  <div>
                    {[6, 7, 8, 9, 8, 7, 6].map((num, i) => renderSeatRow(i, num, 3))}
                    <div style={{ textAlign: 'center', marginTop: '1rem', color: '#555' }}>Section 3</div>
@@ -188,12 +192,12 @@ const Reservation = () => {
                 <>
                   {selectedSeats.map(seat => (
                     <div key={seat} style={{ background: '#fff', padding: '1rem', borderRadius: '16px', display: 'flex', gap: '1rem', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
-                       <img src={CONCERT_IMAGES.taylor_swift} alt="Concert thumb" referrerPolicy="no-referrer" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />
+                       <img src={event.imageUrl} alt="Concert thumb" referrerPolicy="no-referrer" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} />
                        <div style={{ flex: 1 }}>
-                          <h4 style={{ fontWeight: 'bold', fontSize: '1rem', marginBottom: '0.25rem' }}>Taylor Swift: The Eras Tour</h4>
-                          <div style={{ color: '#555', fontSize: '0.85rem', marginBottom: '0.25rem' }}>June 04, Mon. 08:00 pm . VIP Ticket</div>
+                          <h4 style={{ fontWeight: 'bold', fontSize: '1rem', marginBottom: '0.25rem' }}>{event.title}</h4>
+                          <div style={{ color: '#555', fontSize: '0.85rem', marginBottom: '0.25rem' }}>{formattedDate} at {formattedTime}</div>
                           <div style={{ color: '#555', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Section {seat.split('-')[0].replace('S', '')}, Row {seat.split('-')[1]}, Seat {seat.split('-')[2]}</div>
-                          <div style={{ fontWeight: 'bold' }}>₹{ticketPrice.toFixed(2)}</div>
+                          <div style={{ fontWeight: 'bold' }}>{ticketPrice} MATIC</div>
                        </div>
                        <button onClick={() => removeSeat(seat)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#888', position: 'absolute', top: '1rem', right: '1rem' }}>
                           <Trash2 size={18} />
@@ -204,20 +208,20 @@ const Reservation = () => {
                   <div style={{ background: '#fff', padding: '2rem', borderRadius: '16px', boxShadow: 'var(--shadow-sm)', marginTop: '1rem' }}>
                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#555' }}>
                         <span>Subtotal</span>
-                        <span>₹{subtotal.toFixed(2)}</span>
+                        <span>{subtotal.toFixed(3)} MATIC</span>
                      </div>
                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', color: '#555' }}>
                         <span>Service Fees</span>
-                        <span>₹{serviceFee.toFixed(2)}</span>
+                        <span>{serviceFee.toFixed(3)} MATIC</span>
                      </div>
                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                        <span>Total INR ({selectedSeats.length} item{selectedSeats.length > 1 ? 's' : ''})</span>
-                        <span>₹{total.toFixed(2)}</span>
+                        <span>Total ({selectedSeats.length} item{selectedSeats.length > 1 ? 's' : ''})</span>
+                        <span>{total.toFixed(3)} MATIC</span>
                      </div>
                      <button 
                        className="btn btn-primary" 
                        style={{ width: '100%', padding: '1rem', borderRadius: '8px' }}
-                       onClick={() => navigate('/checkout', { state: { selectedSeats, total, subtotal, serviceFee } })}
+                       onClick={() => navigate('/checkout', { state: { selectedSeats, total, subtotal, serviceFee, event } })}
                      >
                        Checkout &rarr;
                      </button>

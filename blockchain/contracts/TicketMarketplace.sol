@@ -8,6 +8,7 @@ import "./TicketNFT.sol";
 /**
  * @title TicketMarketplace
  * @dev Secondary market for reselling BlockTicket NFTs with a hard price cap.
+ *      Supports multiple TicketNFT contracts deployed by the EventFactory.
  *      Sellers must approve this contract to transfer their NFT before listing.
  *      The original mint price cap (e.g. 110%) is enforced on-chain.
  */
@@ -23,29 +24,29 @@ contract TicketMarketplace is Ownable, ReentrancyGuard {
 
     // ─── State Variables ──────────────────────────────────────────────────────
 
-    TicketNFT public nftContract;
-    uint256   public platformFeePercent; // e.g. 2 = 2%
+    uint256 public platformFeePercent; // e.g. 2 = 2%
 
-    mapping(uint256 => Listing) public listings;
+    // Mapping: nftContract => tokenId => Listing
+    mapping(address => mapping(uint256 => Listing)) public listings;
 
-    uint256[] private _activeListingIds;
-    mapping(uint256 => uint256) private _listingIndexById; // tokenId => index in _activeListingIds
+    // Track active listings per contract
+    mapping(address => uint256[]) private _activeListingIds;
+    // nftContract => tokenId => index in _activeListingIds
+    mapping(address => mapping(uint256 => uint256)) private _listingIndexById;
 
     // ─── Events ───────────────────────────────────────────────────────────────
 
-    event TicketListed(uint256 indexed tokenId, address indexed seller, uint256 price);
-    event TicketSold(uint256 indexed tokenId, address indexed buyer, address indexed seller, uint256 price);
-    event TicketDelisted(uint256 indexed tokenId, address indexed seller);
-    event PriceUpdated(uint256 indexed tokenId, uint256 newPrice);
+    event TicketListed(address indexed nftContract, uint256 indexed tokenId, address indexed seller, uint256 price);
+    event TicketSold(address indexed nftContract, uint256 indexed tokenId, address indexed buyer, address seller, uint256 price);
+    event TicketDelisted(address indexed nftContract, uint256 indexed tokenId, address indexed seller);
+    event PriceUpdated(address indexed nftContract, uint256 indexed tokenId, uint256 newPrice);
     event PlatformFeeUpdated(uint256 newFee);
     event PlatformFeesWithdrawn(address indexed to, uint256 amount);
 
     // ─── Constructor ──────────────────────────────────────────────────────────
 
-    constructor(address payable nftContractAddress, uint256 platformFee_) Ownable(msg.sender) {
-        require(nftContractAddress != address(0), "Invalid NFT contract");
+    constructor(uint256 platformFee_) Ownable(msg.sender) {
         require(platformFee_ <= 20, "Platform fee cannot exceed 20%");
-        nftContract = TicketNFT(nftContractAddress);
         platformFeePercent = platformFee_;
     }
 
@@ -53,14 +54,16 @@ contract TicketMarketplace is Ownable, ReentrancyGuard {
 
     /**
      * @notice List a ticket for resale.
-     * @dev Caller must call nftContract.approve(marketplaceAddress, tokenId) first.
+     * @dev Caller must call NFTContract.approve(marketplaceAddress, tokenId) first.
+     * @param nftContractAddress Address of the TicketNFT contract
      * @param tokenId Token ID to list
      * @param price   Asking price in wei (must be <= maxResalePrice)
      */
-    function listTicket(uint256 tokenId, uint256 price) external {
+    function listTicket(address nftContractAddress, uint256 tokenId, uint256 price) external {
+        TicketNFT nftContract = TicketNFT(payable(nftContractAddress));
         require(nftContract.ownerOf(tokenId) == msg.sender, "You don't own this ticket");
         require(!nftContract.ticketUsed(tokenId), "Used tickets cannot be listed");
-        require(!listings[tokenId].active, "Already listed");
+        require(!listings[nftContractAddress][tokenId].active, "Already listed");
         require(price > 0, "Price must be > 0");
 
         // Enforce the price cap from the NFT contract
@@ -74,23 +77,23 @@ contract TicketMarketplace is Ownable, ReentrancyGuard {
             "Marketplace not approved - call NFT.approve() first"
         );
 
-        listings[tokenId] = Listing({
+        listings[nftContractAddress][tokenId] = Listing({
             seller: msg.sender,
             price:  price,
             active: true
         });
 
-        _listingIndexById[tokenId] = _activeListingIds.length;
-        _activeListingIds.push(tokenId);
+        _listingIndexById[nftContractAddress][tokenId] = _activeListingIds[nftContractAddress].length;
+        _activeListingIds[nftContractAddress].push(tokenId);
 
-        emit TicketListed(tokenId, msg.sender, price);
+        emit TicketListed(nftContractAddress, tokenId, msg.sender, price);
     }
 
     /**
      * @notice Purchase a listed ticket.
      */
-    function buyTicket(uint256 tokenId) external payable nonReentrant {
-        Listing storage listing = listings[tokenId];
+    function buyTicket(address nftContractAddress, uint256 tokenId) external payable nonReentrant {
+        Listing storage listing = listings[nftContractAddress][tokenId];
         require(listing.active, "Ticket not listed for sale");
         require(msg.value >= listing.price, "Insufficient MATIC sent");
         require(msg.sender != listing.seller, "Cannot buy your own ticket");
@@ -99,10 +102,10 @@ contract TicketMarketplace is Ownable, ReentrancyGuard {
         uint256 price  = listing.price;
 
         // Remove listing
-        _removeListing(tokenId);
+        _removeListing(nftContractAddress, tokenId);
 
         // Transfer NFT to buyer
-        nftContract.transferFrom(seller, msg.sender, tokenId);
+        TicketNFT(payable(nftContractAddress)).transferFrom(seller, msg.sender, tokenId);
 
         // Distribute funds
         uint256 fee           = (price * platformFeePercent) / 100;
@@ -117,51 +120,52 @@ contract TicketMarketplace is Ownable, ReentrancyGuard {
             require(refunded, "Refund failed");
         }
 
-        emit TicketSold(tokenId, msg.sender, seller, price);
+        emit TicketSold(nftContractAddress, tokenId, msg.sender, seller, price);
     }
 
     /**
      * @notice Delist a ticket from resale.
      */
-    function delistTicket(uint256 tokenId) external {
-        Listing storage listing = listings[tokenId];
+    function delistTicket(address nftContractAddress, uint256 tokenId) external {
+        Listing storage listing = listings[nftContractAddress][tokenId];
         require(listing.active, "Not listed");
         require(listing.seller == msg.sender || msg.sender == owner(), "Not authorized");
 
-        _removeListing(tokenId);
-        emit TicketDelisted(tokenId, msg.sender);
+        _removeListing(nftContractAddress, tokenId);
+        emit TicketDelisted(nftContractAddress, tokenId, msg.sender);
     }
 
     /**
      * @notice Update the price of an existing listing.
      */
-    function updatePrice(uint256 tokenId, uint256 newPrice) external {
-        Listing storage listing = listings[tokenId];
+    function updatePrice(address nftContractAddress, uint256 tokenId, uint256 newPrice) external {
+        Listing storage listing = listings[nftContractAddress][tokenId];
         require(listing.active, "Not listed");
         require(listing.seller == msg.sender, "Not your listing");
         require(newPrice > 0, "Price must be > 0");
 
+        TicketNFT nftContract = TicketNFT(payable(nftContractAddress));
         uint256 cap = nftContract.maxResalePrice(tokenId);
         require(newPrice <= cap, "Price exceeds resale cap");
 
         listing.price = newPrice;
-        emit PriceUpdated(tokenId, newPrice);
+        emit PriceUpdated(nftContractAddress, tokenId, newPrice);
     }
 
     // ─── View Functions ───────────────────────────────────────────────────────
 
     /**
-     * @notice Get all active listing token IDs.
+     * @notice Get all active listing token IDs for a specific contract.
      */
-    function getActiveListings() external view returns (uint256[] memory) {
-        return _activeListingIds;
+    function getActiveListings(address nftContractAddress) external view returns (uint256[] memory) {
+        return _activeListingIds[nftContractAddress];
     }
 
     /**
-     * @notice Get listing details for a token.
+     * @notice Get listing details for a token in a contract.
      */
-    function getListing(uint256 tokenId) external view returns (Listing memory) {
-        return listings[tokenId];
+    function getListing(address nftContractAddress, uint256 tokenId) external view returns (Listing memory) {
+        return listings[nftContractAddress][tokenId];
     }
 
     // ─── Admin Functions ──────────────────────────────────────────────────────
@@ -182,17 +186,16 @@ contract TicketMarketplace is Ownable, ReentrancyGuard {
 
     // ─── Internal Helpers ─────────────────────────────────────────────────────
 
-    function _removeListing(uint256 tokenId) internal {
-        // Swap-and-pop to remove from active listings array
-        uint256 idx = _listingIndexById[tokenId];
-        uint256 lastId = _activeListingIds[_activeListingIds.length - 1];
+    function _removeListing(address nftContractAddress, uint256 tokenId) internal {
+        uint256 idx = _listingIndexById[nftContractAddress][tokenId];
+        uint256 lastId = _activeListingIds[nftContractAddress][_activeListingIds[nftContractAddress].length - 1];
 
-        _activeListingIds[idx] = lastId;
-        _listingIndexById[lastId] = idx;
+        _activeListingIds[nftContractAddress][idx] = lastId;
+        _listingIndexById[nftContractAddress][lastId] = idx;
 
-        _activeListingIds.pop();
-        delete _listingIndexById[tokenId];
-        delete listings[tokenId];
+        _activeListingIds[nftContractAddress].pop();
+        delete _listingIndexById[nftContractAddress][tokenId];
+        delete listings[nftContractAddress][tokenId];
     }
 
     receive() external payable {}

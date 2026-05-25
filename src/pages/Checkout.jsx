@@ -10,20 +10,18 @@ import { useWallet } from '../context/WalletContext';
 import { CONCERT_IMAGES } from '../constants/images';
 import { CHAIN_ID, CONTRACT_ADDRESSES } from '../contracts/addresses';
 
-// Build a minimal on-chain metadata URI for the ticket
-// In production this would be an IPFS CID from Pinata
-const buildTokenURI = (seat, eventName, date) => {
+// Build a minimal on-chain metadata URI for the ticket in case IPFS fails
+const buildTokenURI = (seat, eventName, date, imageUrl) => {
   const metadata = {
     name: `BlockTicket - ${eventName}`,
     description: `Official NFT ticket for ${eventName} on ${date}. Seat: ${seat}.`,
-    image: 'https://via.placeholder.com/400x400?text=BlockTicket',
+    image: imageUrl || 'https://via.placeholder.com/400x400?text=BlockTicket',
     attributes: [
       { trait_type: 'Event', value: eventName },
       { trait_type: 'Date', value: date },
       { trait_type: 'Seat', value: seat },
     ],
   };
-  // btoa() only handles Latin-1 — use TextEncoder for full UTF-8 safety
   const json = JSON.stringify(metadata);
   const bytes = new TextEncoder().encode(json);
   const binary = Array.from(bytes).map(b => String.fromCharCode(b)).join('');
@@ -33,14 +31,25 @@ const buildTokenURI = (seat, eventName, date) => {
 const Checkout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { nftWrite } = useContract();
+  const { getNFTContract } = useContract();
   const { account, chainId, switchNetwork } = useWallet();
 
+  // Load custom event data from state, fallback to Taylor Swift
+  const event = location.state?.event || {
+    _id: 'default',
+    title: 'Taylor Swift: The Eras Tour',
+    ticketPrice: '0.01',
+    date: '2026-06-04T20:00:00.000Z',
+    venue: 'Royal Albert Hall',
+    imageUrl: CONCERT_IMAGES.taylor_swift,
+    contractAddress: CONTRACT_ADDRESSES.TicketNFT
+  };
+
   const selectedSeats = location.state?.selectedSeats || ['S1-0-1'];
-  const ticketPrice = 399.00;
-  const subtotal = location.state?.subtotal || selectedSeats.length * ticketPrice;
-  const serviceFee = location.state?.serviceFee || selectedSeats.length * 1.00;
-  const total = location.state?.total || subtotal + serviceFee;
+  const ticketPrice = parseFloat(event.ticketPrice || '0.01');
+  const subtotal = selectedSeats.length * ticketPrice;
+  const serviceFee = selectedSeats.length * (ticketPrice * 0.05); // 5% fee
+  const total = subtotal + serviceFee;
 
   const [toast, setToast] = useState(null);
   const [minting, setMinting] = useState(false);
@@ -50,30 +59,33 @@ const Checkout = () => {
   const isWrongNetwork = chainId !== CHAIN_ID;
   const closeToast = () => setToast(null);
 
+  // Set up contract instances for read/write
+  const contractAddress = event.contractAddress || CONTRACT_ADDRESSES.TicketNFT;
+  const nftReadCustom = getNFTContract(contractAddress, false);
+  const nftWriteCustom = getNFTContract(contractAddress, true);
+
   // Fetch ticket price from contract using the READ provider (no signer needed)
-  const { nftRead } = useContract();
   useEffect(() => {
-    if (!nftRead) return;
-    nftRead.ticketPrice()
+    if (!nftReadCustom) return;
+    nftReadCustom.ticketPrice()
       .then(p => setOnChainPrice(p))
       .catch(err => {
         console.warn('Could not fetch ticketPrice from contract:', err.message);
-        // Fall back to the known deploy price: 0.01 ETH
-        setOnChainPrice(ethers.parseEther('0.01'));
+        setOnChainPrice(ethers.parseEther(event.ticketPrice || '0.01'));
       });
-  }, [nftRead]);
+  }, [nftReadCustom, event.ticketPrice]);
 
   const handleMint = async () => {
     if (!agreed) {
       alert('Please agree to the Privacy Policy before proceeding.');
       return;
     }
-    if (!nftWrite) {
+    if (!nftWriteCustom) {
       alert('Wallet not connected. Please connect MetaMask first.');
       return;
     }
 
-    // Check network via MetaMask directly — most reliable source
+    // Check network via MetaMask directly
     const metamaskChainId = parseInt(
       await window.ethereum.request({ method: 'eth_chainId' }), 16
     );
@@ -89,23 +101,22 @@ const Checkout = () => {
     setToast({ status: 'pending', message: 'Waiting for MetaMask confirmation…' });
 
     try {
-      // Pre-flight: use nftRead (Hardhat JSON-RPC, not MetaMask) to verify
-      // the contract exists. nftWrite.runner.provider is MetaMask which may
-      // be on a different network even after the chain ID check above.
-      const contractAddress = CONTRACT_ADDRESSES.TicketNFT;
-      const code = await nftRead.runner.provider.getCode(contractAddress);
+      // Pre-flight contract check
+      const code = await nftReadCustom.runner.provider.getCode(contractAddress);
       if (code === '0x') {
         throw new Error(
-          'Contract not found on localhost. ' +
-          'Run: npx hardhat run scripts/deploy.js --network localhost'
+          `Contract not found at address ${contractAddress}. Make sure your local chain is running and deployed.`
         );
       }
 
-      // Use fetched price or fall back to 0.01 ETH
-      const priceWei = onChainPrice ?? ethers.parseEther('0.01');
+      // Use fetched price or fall back to event price
+      const priceWei = onChainPrice ?? ethers.parseEther(event.ticketPrice || '0.01');
 
       const seat = selectedSeats[0];
       const seatLabel = `Section ${seat.split('-')[0].replace('S','')}, Row ${seat.split('-')[1]}, Seat ${seat.split('-')[2]}`;
+      const formattedDateStr = new Date(event.date).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      });
 
       // ── Step 1: Upload metadata to IPFS via Pinata ──────────────────────
       setToast({ status: 'pending', message: 'Uploading ticket metadata to IPFS…' });
@@ -117,16 +128,16 @@ const Checkout = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: `BlockTicket - Taylor Swift: The Eras Tour`,
-            description: `Official NFT ticket for Taylor Swift: The Eras Tour on June 04, 2026. Seat: ${seatLabel}.`,
-            image: 'https://upload.wikimedia.org/wikipedia/en/f/f6/Taylor_Swift_-_Fearless.png',
-            event: 'Taylor Swift: The Eras Tour',
-            date: 'June 04, 2026',
+            name: `BlockTicket - ${event.title}`,
+            description: `Official NFT ticket for ${event.title} at ${event.venue} on ${formattedDateStr}. Seat: ${seatLabel}.`,
+            image: event.imageUrl,
+            event: event.title,
+            date: formattedDateStr,
             seat: seatLabel,
             attributes: [
-              { trait_type: 'Event', value: 'Taylor Swift: The Eras Tour' },
-              { trait_type: 'Venue', value: 'Royal Albert Hall' },
-              { trait_type: 'Date', value: 'June 04, 2026' },
+              { trait_type: 'Event', value: event.title },
+              { trait_type: 'Venue', value: event.venue },
+              { trait_type: 'Date', value: formattedDateStr },
               { trait_type: 'Seat', value: seatLabel },
               { trait_type: 'Category', value: 'VIP' },
             ],
@@ -142,20 +153,20 @@ const Checkout = () => {
       } catch (ipfsErr) {
         // Fall back to data URI if backend/Pinata is unavailable
         console.warn('IPFS upload failed, using data URI fallback:', ipfsErr.message);
-        tokenURI = buildTokenURI(seat, 'Taylor Swift: The Eras Tour', 'June 04, 2026');
+        tokenURI = buildTokenURI(seatLabel, event.title, formattedDateStr, event.imageUrl);
       }
 
       // ── Step 2: Mint NFT on-chain ────────────────────────────────────────
       setToast({ status: 'pending', message: 'Confirm transaction in MetaMask…' });
 
-      const tx = await nftWrite.mintTicket(tokenURI, { value: priceWei });
+      const tx = await nftWriteCustom.mintTicket(tokenURI, { value: priceWei });
 
       setToast({ status: 'pending', message: 'Transaction submitted — waiting for confirmation…', txHash: tx.hash });
 
       const receipt = await tx.wait();
 
       // Parse TicketMinted event to get tokenId
-      const iface = nftWrite.interface;
+      const iface = nftWriteCustom.interface;
       let tokenId = null;
       for (const log of receipt.logs) {
         try {
@@ -180,16 +191,30 @@ const Checkout = () => {
           seat: seatLabel,
           ipfsMetadataCID: ipfsCID,
           tokenURI,
+          eventId: event._id === 'default' ? undefined : event._id
         }),
-      }).catch(() => { /* non-blocking */ });
+      }).catch((e) => { console.warn('Non-blocking: Failed to save ticket in DB:', e); });
+
+      // Clean event stats (increment ticketsSold in DB)
+      if (event._id !== 'default') {
+        fetch(`http://localhost:5000/api/events/${event._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('blockticket_token')}`
+          },
+          body: JSON.stringify({
+            ticketsSold: (event.ticketsSold || 0) + 1
+          })
+        }).catch(() => {});
+      }
 
       setTimeout(() => {
-        navigate('/mint-success', { state: { tokenId, txHash: tx.hash, seat: seatLabel, ipfsCID, tokenURI } });
+        navigate('/mint-success', { state: { tokenId, txHash: tx.hash, seat: seatLabel, ipfsCID, tokenURI, event } });
       }, 1500);
 
     } catch (err) {
       console.error('Mint error:', err);
-      // Surface a readable message
       const msg = err?.reason
         ?? err?.data?.message
         ?? err?.message
@@ -200,8 +225,15 @@ const Checkout = () => {
     }
   };
 
+  const formattedDate = new Date(event.date).toLocaleDateString('en-US', {
+    month: 'short', day: '2-digit', weekday: 'short'
+  });
+  const formattedTime = new Date(event.date).toLocaleTimeString('en-US', {
+    hour: 'numeric', minute: '2-digit'
+  });
+
   return (
-    <div style={{ backgroundColor: '#F8F9FA', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: '#F8F9FA', minHeight: '100vh', color: '#111' }}>
       <Navbar />
 
       {toast && (
@@ -258,28 +290,28 @@ const Checkout = () => {
 
             {selectedSeats.map(seat => (
               <div key={seat} style={{ display: 'flex', gap: '1.5rem', borderBottom: '1px solid #eaeaea', paddingBottom: '1.5rem' }}>
-                <img src={CONCERT_IMAGES.taylor_swift} alt="Concert" referrerPolicy="no-referrer" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '12px' }} />
+                <img src={event.imageUrl} alt="Concert" referrerPolicy="no-referrer" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '12px' }} />
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <h4 style={{ fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Taylor Swift: The Eras Tour</h4>
-                  <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.25rem' }}>June 04, Mon. 08:00 pm · VIP Ticket</div>
+                  <h4 style={{ fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '0.5rem' }}>{event.title}</h4>
+                  <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{formattedDate} at {formattedTime} · VIP Ticket</div>
                   <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
                     Section {seat.split('-')[0].replace('S', '')}, Row {seat.split('-')[1]}, Seat {seat.split('-')[2]}
                   </div>
-                  <div style={{ fontWeight: 'bold' }}>0.01 ETH</div>
+                  <div style={{ fontWeight: 'bold' }}>{ticketPrice} MATIC</div>
                 </div>
               </div>
             ))}
 
             <div style={{ marginTop: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', color: '#555', fontSize: '1.1rem' }}>
-                <span>Subtotal</span><span>0.01 ETH × {selectedSeats.length}</span>
+                <span>Subtotal</span><span>{ticketPrice} MATIC × {selectedSeats.length}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', color: '#555', fontSize: '1.1rem' }}>
                 <span>Platform Fee</span><span>~2%</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.3rem', borderTop: '1px solid #eaeaea', paddingTop: '1.5rem' }}>
                 <span>Total <span style={{ fontWeight: 'normal', color: '#888', fontSize: '1.1rem' }}>({selectedSeats.length} ticket{selectedSeats.length > 1 ? 's' : ''})</span></span>
-                <span>0.01 ETH</span>
+                <span>{total.toFixed(3)} MATIC</span>
               </div>
             </div>
           </div>
@@ -308,7 +340,7 @@ const Checkout = () => {
               <div style={{ color: '#888', marginBottom: '0.25rem' }}>Connected Wallet</div>
               <div style={{ fontFamily: 'monospace', fontWeight: '600', color: '#111', wordBreak: 'break-all' }}>{account}</div>
               <div style={{ color: '#888', marginTop: '0.5rem', fontSize: '0.8rem' }}>
-                Ticket price: <strong style={{ color: '#111' }}>{onChainPrice ? ethers.formatEther(onChainPrice) + ' ETH' : 'loading…'}</strong>
+                Ticket price: <strong style={{ color: '#111' }}>{onChainPrice ? ethers.formatEther(onChainPrice) + ' MATIC' : 'loading…'}</strong>
               </div>
             </div>
 
@@ -341,11 +373,11 @@ const Checkout = () => {
               onClick={handleMint}
               disabled={minting}
             >
-              {minting ? 'Minting…' : `Mint NFT Ticket (${onChainPrice ? ethers.formatEther(onChainPrice) : '0.01'} ETH)`}
+              {minting ? 'Minting…' : `Mint NFT Ticket (${onChainPrice ? ethers.formatEther(onChainPrice) : ticketPrice} MATIC)`}
             </button>
 
             <p style={{ textAlign: 'center', color: '#888', fontSize: '0.85rem', marginTop: '1rem' }}>
-              Gas fees apply. Make sure your wallet has enough ETH/MATIC.
+              Gas fees apply. Make sure your wallet has enough MATIC.
             </p>
           </div>
         </div>

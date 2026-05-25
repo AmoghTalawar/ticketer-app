@@ -6,7 +6,7 @@ import { useWallet } from '../context/WalletContext';
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { account, isConnected, isCorrectNetwork, connect, disconnect, switchNetwork, connecting } = useWallet();
+  const { account, isConnected, isCorrectNetwork, connect, disconnect, switchNetwork, connecting, user } = useWallet();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Pages that have a light header background need dark text
@@ -76,6 +76,7 @@ const Navbar = () => {
             <div className="flex gap-4" style={{ fontSize: '0.9rem' }}>
               <Link to="/" style={{ color: location.pathname === '/' ? textColor : mutedTextColor, textDecoration: 'none' }}>Home</Link>
               <Link to="/concerts" style={{ color: location.pathname === '/concerts' ? textColor : mutedTextColor, textDecoration: 'none' }}>Concerts</Link>
+              <Link to="/resale-market" style={{ color: location.pathname === '/resale-market' ? textColor : mutedTextColor, textDecoration: 'none' }}>Resale Market</Link>
               <Link to="/singers" style={{ color: location.pathname === '/singers' ? textColor : mutedTextColor, textDecoration: 'none' }}>Singers</Link>
               <Link to="/blogs" style={{ color: location.pathname === '/blogs' ? textColor : mutedTextColor, textDecoration: 'none' }}>Blogs</Link>
               <Link to="/contact" style={{ color: location.pathname === '/contact' ? textColor : mutedTextColor, textDecoration: 'none' }}>Contact</Link>
@@ -119,12 +120,16 @@ const Navbar = () => {
                       Connected Wallet
                       <div style={{ color: '#111', fontWeight: '600', fontFamily: 'monospace', marginTop: '2px' }}>{shortAddress}</div>
                     </div>
-                    {[
+                    {(user?.role === 'organizer' ? [
+                      { label: 'Organizer Dashboard', path: '/organizer-dashboard' },
+                      { label: 'Create Event', path: '/create-event' },
+                      { label: 'Gate Scanner', path: '/ticket-verification' },
+                    ] : [
                       { label: 'My Tickets', path: '/my-tickets' },
+                      { label: 'Resale Market', path: '/resale-market' },
                       { label: 'Account', path: '/account' },
                       { label: 'Transaction History', path: '/transaction-history' },
-                      { label: 'Organizer Dashboard', path: '/organizer-dashboard' },
-                    ].map(item => (
+                    ]).map(item => (
                       <button
                         key={item.path}
                         onClick={() => { navigate(item.path); setDropdownOpen(false); }}

@@ -37,7 +37,7 @@ const fetchMetadata = async (tokenURI) => {
 const MyTickets = () => {
   const navigate = useNavigate();
   const { account } = useWallet();
-  const { nftRead, marketplaceWrite } = useContract();
+  const { marketplaceWrite, getNFTContract } = useContract();
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,49 +47,107 @@ const MyTickets = () => {
   const [txStatus, setTxStatus] = useState({}); // tokenId → 'listing' | 'done' | 'error'
 
   const loadTickets = useCallback(async () => {
-    if (!nftRead || !account) return;
+    if (!account) return;
     setLoading(true);
     setError(null);
     try {
-      const tokenIds = await nftRead.tokensByOwner(account);
+      const res = await fetch(`http://localhost:5000/api/tickets/my?wallet=${account}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || 'Failed to fetch tickets');
+
       const items = await Promise.all(
-        tokenIds.map(async (id) => {
-          const tokenId = id.toString();
-          const tokenURI = await nftRead.tokenURI(tokenId);
-          const isUsed = await nftRead.ticketUsed(tokenId);
-          const metadata = await fetchMetadata(tokenURI);
-          return { tokenId, tokenURI, isUsed, metadata };
+        data.data.map(async (ticket) => {
+          const tokenId = ticket.tokenId;
+          const contractAddress = ticket.eventId?.contractAddress || CONTRACT_ADDRESSES.TicketNFT;
+          
+          let isUsed = ticket.isUsed;
+          let currentOwner = ticket.owner;
+          let tokenURI = ticket.tokenURI;
+          
+          // Query live blockchain data if contractAddress is available
+          if (contractAddress) {
+            try {
+              const customNFT = getNFTContract(contractAddress, false);
+              if (customNFT) {
+                const [onChainUsed, onChainOwner, onChainURI] = await Promise.all([
+                  customNFT.ticketUsed(tokenId),
+                  customNFT.ownerOf(tokenId),
+                  customNFT.tokenURI(tokenId)
+                ]);
+                isUsed = onChainUsed;
+                currentOwner = onChainOwner.toLowerCase();
+                tokenURI = onChainURI;
+              }
+            } catch (blockchainErr) {
+              console.warn(`Failed to fetch on-chain status for token ${tokenId} on contract ${contractAddress}:`, blockchainErr);
+            }
+          }
+          
+          return {
+            tokenId,
+            tokenURI,
+            isUsed,
+            currentOwner,
+            contractAddress,
+            metadata: ticket.eventId ? {
+              name: `${ticket.eventId.title} - Ticket #${tokenId}`,
+              description: ticket.eventId.description,
+              imageUrl: ticket.eventId.imageUrl,
+              attributes: [
+                { trait_type: 'Venue', value: ticket.eventId.venue },
+                { trait_type: 'Seat', value: ticket.seatInfo || 'General Admission' },
+              ]
+            } : {
+              name: `BlockTicket #${tokenId}`,
+              description: `Official NFT Ticket #${tokenId}`,
+              imageUrl: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?q=80&w=600',
+              attributes: [
+                { trait_type: 'Venue', value: 'Decentralized Arena' },
+                { trait_type: 'Seat', value: ticket.seatInfo || 'General Admission' },
+              ]
+            }
+          };
         })
       );
-      setTickets(items);
+
+      // Only display tickets that this user currently owns on-chain
+      const ownedItems = items.filter(item => item.currentOwner.toLowerCase() === account.toLowerCase());
+      setTickets(ownedItems);
     } catch (err) {
       setError('Failed to load tickets: ' + (err.message || err));
     } finally {
       setLoading(false);
     }
-  }, [nftRead, account]);
+  }, [getNFTContract, account]);
 
   useEffect(() => { loadTickets(); }, [loadTickets]);
 
-  // QR code value: tokenId + ownerAddress (used by gate scanner)
-  const qrValue = (tokenId) => `BLOCKTICKET:${tokenId}:${account}`;
+  // QR code value: tokenId + ownerAddress + contractAddress (used by gate scanner)
+  const qrValue = (tokenId, contractAddress) => `BLOCKTICKET:${contractAddress}:${tokenId}:${account}`;
 
-  const handleListForResale = async (tokenId) => {
-    if (!marketplaceWrite || !listPrice) return;
+  const handleListForResale = async (tokenId, contractAddress) => {
+    if (!marketplaceWrite || !listPrice || !contractAddress) return;
     setTxStatus(s => ({ ...s, [tokenId]: 'listing' }));
     try {
       const priceWei = ethers.parseEther(listPrice);
 
-      // Step 1: approve marketplace to transfer the NFT
-      const signer = marketplaceWrite.runner;
-      const nftContract = new ethers.Contract(CONTRACT_ADDRESSES.TicketNFT, TicketNFTAbi.abi, signer);
+      // Step 1: approve marketplace to transfer the NFT on the dynamic contract
+      const customNFTWrite = getNFTContract(contractAddress, true);
+      if (!customNFTWrite) throw new Error("Could not initialize contract write instance");
 
-      const approveTx = await nftContract.approve(CONTRACT_ADDRESSES.TicketMarketplace, tokenId);
+      const approveTx = await customNFTWrite.approve(CONTRACT_ADDRESSES.TicketMarketplace, tokenId);
       await approveTx.wait();
 
       // Step 2: list on marketplace
-      const listTx = await marketplaceWrite.listTicket(tokenId, priceWei);
+      const listTx = await marketplaceWrite.listTicket(contractAddress, tokenId, priceWei);
       await listTx.wait();
+
+      // Step 3: notify backend of listing
+      await fetch('http://localhost:5000/api/tickets/list-resale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenId, resalePrice: listPrice, owner: account })
+      });
 
       setTxStatus(s => ({ ...s, [tokenId]: 'done' }));
       setListingTokenId(null);
@@ -145,7 +203,7 @@ const MyTickets = () => {
               {/* QR Code panel */}
               <div style={{ background: '#111', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', minWidth: '180px' }}>
                 <QRCodeSVG
-                  value={qrValue(ticket.tokenId)}
+                  value={qrValue(ticket.tokenId, ticket.contractAddress)}
                   size={120}
                   bgColor="#111"
                   fgColor="#fff"
@@ -193,9 +251,9 @@ const MyTickets = () => {
                 {!ticket.isUsed && (
                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <button
-                      className="btn btn-outline"
+                      className="btn btn-outline-dark"
                       style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', fontSize: '0.9rem' }}
-                      onClick={() => navigate('/ticket', { state: { tokenId: ticket.tokenId, metadata: ticket.metadata, qrValue: qrValue(ticket.tokenId) } })}
+                      onClick={() => navigate('/ticket', { state: { tokenId: ticket.tokenId, metadata: ticket.metadata, qrValue: qrValue(ticket.tokenId, ticket.contractAddress) } })}
                     >
                       <Download size={14} /> Download Ticket
                     </button>
@@ -214,7 +272,7 @@ const MyTickets = () => {
                         <button
                           className="btn btn-primary"
                           style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', opacity: txStatus[ticket.tokenId] === 'listing' ? 0.7 : 1 }}
-                          onClick={() => handleListForResale(ticket.tokenId)}
+                          onClick={() => handleListForResale(ticket.tokenId, ticket.contractAddress)}
                           disabled={txStatus[ticket.tokenId] === 'listing'}
                         >
                           {txStatus[ticket.tokenId] === 'listing' ? 'Listing…' : 'Confirm'}

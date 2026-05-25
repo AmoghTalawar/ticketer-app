@@ -9,7 +9,7 @@ const generateToken = (id) =>
 // POST /api/auth/register
 const register = async (req, res) => {
   try {
-    const { username, email, password, walletAddress } = req.body;
+    const { username, email, password, walletAddress, role } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password required' });
@@ -20,11 +20,45 @@ const register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
+    // Check if wallet address already exists in the system
+    if (walletAddress) {
+      const existingWallet = await User.findOne({ walletAddress: walletAddress.toLowerCase() });
+      if (existingWallet) {
+        // If this wallet is already linked to a fully registered account, reject it
+        if (existingWallet.email || existingWallet.username) {
+          return res.status(400).json({ success: false, message: 'Wallet address is already linked to another account' });
+        }
+
+        // If it's a placeholder user created by the SIWE /nonce endpoint, update it
+        existingWallet.username = username;
+        existingWallet.email = email.toLowerCase();
+        existingWallet.password = password;
+        existingWallet.role = role || 'user';
+        await existingWallet.save();
+
+        const token = generateToken(existingWallet._id);
+
+        return res.status(200).json({
+          success: true,
+          message: 'Account created successfully',
+          token,
+          user: {
+            id: existingWallet._id,
+            username: existingWallet.username,
+            email: existingWallet.email,
+            walletAddress: existingWallet.walletAddress,
+            role: existingWallet.role,
+          },
+        });
+      }
+    }
+
     const user = await User.create({
       username,
       email,
       password,
       walletAddress: walletAddress ? walletAddress.toLowerCase() : undefined,
+      role: role || 'user',
     });
 
     const token = generateToken(user._id);

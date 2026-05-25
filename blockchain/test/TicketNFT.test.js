@@ -29,10 +29,10 @@ async function deployTicketNFTFixture() {
 
 async function deployBothFixture() {
   const base = await deployTicketNFTFixture();
-  const { nft, owner } = base;
+  const { owner } = base;
 
   const TicketMarketplace = await ethers.getContractFactory("TicketMarketplace");
-  const marketplace = await TicketMarketplace.deploy(await nft.getAddress(), 2);
+  const marketplace = await TicketMarketplace.deploy(2);
 
   return { ...base, marketplace };
 }
@@ -131,7 +131,6 @@ describe("TicketNFT", function () {
       const receipt    = await tx.wait();
       const gasCost    = receipt.gasUsed * tx.gasPrice;
       const after      = await ethers.provider.getBalance(buyer1.address);
-      // Should have paid ticketPrice + gas only (excess refunded)
       expect(before - after).to.be.closeTo(TICKET_PRICE + gasCost, ethers.parseEther("0.001"));
     });
 
@@ -195,7 +194,6 @@ describe("TicketNFT", function () {
     it("cannot burn an already-used ticket", async function () {
       const { nft, buyer1, organizer } = await mintedTicket();
       await nft.connect(buyer1).burnTicket(0);
-      // ticketUsed[0] = true but token is burned — trying to burn again should fail
       await expect(nft.connect(organizer).markUsed(0)).to.be.reverted;
     });
 
@@ -298,17 +296,12 @@ describe("TicketMarketplace", function () {
     await nft.connect(buyer1).approve(marketplaceAddress, 0);
 
     const listPrice = (TICKET_PRICE * 105n) / 100n; // 105% — under cap
-    await marketplace.connect(buyer1).listTicket(0, listPrice);
+    await marketplace.connect(buyer1).listTicket(await nft.getAddress(), 0, listPrice);
 
     return { nft, marketplace, owner, organizer, buyer1, buyer2, TICKET_PRICE, SAMPLE_URI, listPrice };
   }
 
   describe("Deployment", function () {
-    it("sets correct NFT contract", async function () {
-      const { nft, marketplace } = await loadFixture(deployBothFixture);
-      expect(await marketplace.nftContract()).to.equal(await nft.getAddress());
-    });
-
     it("sets platform fee", async function () {
       const { marketplace } = await loadFixture(deployBothFixture);
       expect(await marketplace.platformFeePercent()).to.equal(2);
@@ -317,13 +310,13 @@ describe("TicketMarketplace", function () {
 
   describe("Listing", function () {
     it("should list a ticket successfully", async function () {
-      const { marketplace } = await listedTicketFixture();
-      const listing = await marketplace.getListing(0);
+      const { nft, marketplace } = await listedTicketFixture();
+      const listing = await marketplace.getListing(await nft.getAddress(), 0);
       expect(listing.active).to.equal(true);
     });
 
     it("should emit TicketListed event", async function () {
-      const { nft, marketplace, organizer, buyer1, buyer2, TICKET_PRICE, SAMPLE_URI } =
+      const { nft, marketplace, organizer, buyer1, TICKET_PRICE, SAMPLE_URI } =
         await loadFixture(deployBothFixture);
 
       await nft.connect(organizer).toggleSale();
@@ -331,9 +324,9 @@ describe("TicketMarketplace", function () {
       await nft.connect(buyer1).approve(await marketplace.getAddress(), 0);
 
       const listPrice = (TICKET_PRICE * 105n) / 100n;
-      await expect(marketplace.connect(buyer1).listTicket(0, listPrice))
+      await expect(marketplace.connect(buyer1).listTicket(await nft.getAddress(), 0, listPrice))
         .to.emit(marketplace, "TicketListed")
-        .withArgs(0, buyer1.address, listPrice);
+        .withArgs(await nft.getAddress(), 0, buyer1.address, listPrice);
     });
 
     it("should revert if price exceeds cap", async function () {
@@ -346,7 +339,7 @@ describe("TicketMarketplace", function () {
 
       const overPrice = (TICKET_PRICE * 120n) / 100n; // 120% — over cap
       await expect(
-        marketplace.connect(buyer1).listTicket(0, overPrice)
+        marketplace.connect(buyer1).listTicket(await nft.getAddress(), 0, overPrice)
       ).to.be.revertedWith("Price exceeds resale cap");
     });
 
@@ -359,7 +352,7 @@ describe("TicketMarketplace", function () {
       await nft.connect(buyer1).approve(await marketplace.getAddress(), 0);
 
       await expect(
-        marketplace.connect(buyer2).listTicket(0, TICKET_PRICE)
+        marketplace.connect(buyer2).listTicket(await nft.getAddress(), 0, TICKET_PRICE)
       ).to.be.revertedWith("You don't own this ticket");
     });
   });
@@ -367,100 +360,145 @@ describe("TicketMarketplace", function () {
   describe("Buying", function () {
     it("should transfer NFT to buyer on purchase", async function () {
       const { nft, marketplace, buyer2, listPrice } = await listedTicketFixture();
-      await marketplace.connect(buyer2).buyTicket(0, { value: listPrice });
+      await marketplace.connect(buyer2).buyTicket(await nft.getAddress(), 0, { value: listPrice });
       expect(await nft.ownerOf(0)).to.equal(buyer2.address);
     });
 
     it("should pay seller (minus platform fee)", async function () {
-      const { marketplace, buyer1, buyer2, listPrice } = await listedTicketFixture();
+      const { nft, marketplace, buyer1, buyer2, listPrice } = await listedTicketFixture();
       const before = await ethers.provider.getBalance(buyer1.address);
-      await marketplace.connect(buyer2).buyTicket(0, { value: listPrice });
+      await marketplace.connect(buyer2).buyTicket(await nft.getAddress(), 0, { value: listPrice });
       const after = await ethers.provider.getBalance(buyer1.address);
       const fee = (listPrice * 2n) / 100n;
       expect(after - before).to.equal(listPrice - fee);
     });
 
     it("should emit TicketSold event", async function () {
-      const { marketplace, buyer1, buyer2, listPrice } = await listedTicketFixture();
-      await expect(marketplace.connect(buyer2).buyTicket(0, { value: listPrice }))
+      const { nft, marketplace, buyer1, buyer2, listPrice } = await listedTicketFixture();
+      await expect(marketplace.connect(buyer2).buyTicket(await nft.getAddress(), 0, { value: listPrice }))
         .to.emit(marketplace, "TicketSold")
-        .withArgs(0, buyer2.address, buyer1.address, listPrice);
+        .withArgs(await nft.getAddress(), 0, buyer2.address, buyer1.address, listPrice);
     });
 
     it("should remove listing after sale", async function () {
-      const { marketplace, buyer2, listPrice } = await listedTicketFixture();
-      await marketplace.connect(buyer2).buyTicket(0, { value: listPrice });
-      const listing = await marketplace.getListing(0);
+      const { nft, marketplace, buyer2, listPrice } = await listedTicketFixture();
+      await marketplace.connect(buyer2).buyTicket(await nft.getAddress(), 0, { value: listPrice });
+      const listing = await marketplace.getListing(await nft.getAddress(), 0);
       expect(listing.active).to.equal(false);
     });
 
     it("seller cannot buy own listing", async function () {
-      const { marketplace, buyer1, listPrice } = await listedTicketFixture();
+      const { nft, marketplace, buyer1, listPrice } = await listedTicketFixture();
       await expect(
-        marketplace.connect(buyer1).buyTicket(0, { value: listPrice })
+        marketplace.connect(buyer1).buyTicket(await nft.getAddress(), 0, { value: listPrice })
       ).to.be.revertedWith("Cannot buy your own ticket");
     });
 
     it("should revert if insufficient MATIC", async function () {
-      const { marketplace, buyer2, listPrice } = await listedTicketFixture();
+      const { nft, marketplace, buyer2, listPrice } = await listedTicketFixture();
       await expect(
-        marketplace.connect(buyer2).buyTicket(0, { value: listPrice - 1n })
+        marketplace.connect(buyer2).buyTicket(await nft.getAddress(), 0, { value: listPrice - 1n })
       ).to.be.revertedWith("Insufficient MATIC sent");
     });
   });
 
   describe("Delisting", function () {
     it("seller can delist", async function () {
-      const { marketplace, buyer1 } = await listedTicketFixture();
-      await marketplace.connect(buyer1).delistTicket(0);
-      const listing = await marketplace.getListing(0);
+      const { nft, marketplace, buyer1 } = await listedTicketFixture();
+      await marketplace.connect(buyer1).delistTicket(await nft.getAddress(), 0);
+      const listing = await marketplace.getListing(await nft.getAddress(), 0);
       expect(listing.active).to.equal(false);
     });
 
     it("should emit TicketDelisted event", async function () {
-      const { marketplace, buyer1 } = await listedTicketFixture();
-      await expect(marketplace.connect(buyer1).delistTicket(0))
+      const { nft, marketplace, buyer1 } = await listedTicketFixture();
+      await expect(marketplace.connect(buyer1).delistTicket(await nft.getAddress(), 0))
         .to.emit(marketplace, "TicketDelisted")
-        .withArgs(0, buyer1.address);
+        .withArgs(await nft.getAddress(), 0, buyer1.address);
     });
 
     it("non-seller cannot delist", async function () {
-      const { marketplace, buyer2 } = await listedTicketFixture();
-      await expect(marketplace.connect(buyer2).delistTicket(0)).to.be.revertedWith("Not authorized");
+      const { nft, marketplace, buyer2 } = await listedTicketFixture();
+      await expect(marketplace.connect(buyer2).delistTicket(await nft.getAddress(), 0)).to.be.revertedWith("Not authorized");
     });
   });
 
   describe("Update Price", function () {
     it("seller can update price within cap", async function () {
-      const { marketplace, buyer1, TICKET_PRICE } = await listedTicketFixture();
+      const { nft, marketplace, buyer1, TICKET_PRICE } = await listedTicketFixture();
       const newPrice = (TICKET_PRICE * 108n) / 100n;
-      await marketplace.connect(buyer1).updatePrice(0, newPrice);
-      const listing = await marketplace.getListing(0);
+      await marketplace.connect(buyer1).updatePrice(await nft.getAddress(), 0, newPrice);
+      const listing = await marketplace.getListing(await nft.getAddress(), 0);
       expect(listing.price).to.equal(newPrice);
     });
 
     it("cannot set price above cap", async function () {
-      const { marketplace, buyer1, TICKET_PRICE } = await listedTicketFixture();
+      const { nft, marketplace, buyer1, TICKET_PRICE } = await listedTicketFixture();
       const overPrice = (TICKET_PRICE * 115n) / 100n;
       await expect(
-        marketplace.connect(buyer1).updatePrice(0, overPrice)
+        marketplace.connect(buyer1).updatePrice(await nft.getAddress(), 0, overPrice)
       ).to.be.revertedWith("Price exceeds resale cap");
     });
   });
 
   describe("Active Listings", function () {
     it("getActiveListings returns listed token IDs", async function () {
-      const { marketplace } = await listedTicketFixture();
-      const active = await marketplace.getActiveListings();
+      const { nft, marketplace } = await listedTicketFixture();
+      const active = await marketplace.getActiveListings(await nft.getAddress());
       expect(active.length).to.equal(1);
       expect(active[0]).to.equal(0n);
     });
 
     it("removes token from active listings after sale", async function () {
-      const { marketplace, buyer2, listPrice } = await listedTicketFixture();
-      await marketplace.connect(buyer2).buyTicket(0, { value: listPrice });
-      const active = await marketplace.getActiveListings();
+      const { nft, marketplace, buyer2, listPrice } = await listedTicketFixture();
+      await marketplace.connect(buyer2).buyTicket(await nft.getAddress(), 0, { value: listPrice });
+      const active = await marketplace.getActiveListings(await nft.getAddress());
       expect(active.length).to.equal(0);
     });
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// EventFactory Tests
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe("EventFactory", function () {
+  async function deployFactoryFixture() {
+    const [owner, organizer, buyer] = await ethers.getSigners();
+    const TicketMarketplace = await ethers.getContractFactory("TicketMarketplace");
+    const marketplace = await TicketMarketplace.deploy(2);
+    
+    const EventFactory = await ethers.getContractFactory("EventFactory");
+    const factory = await EventFactory.deploy(await marketplace.getAddress());
+    
+    return { factory, marketplace, owner, organizer, buyer };
+  }
+
+  it("should deploy and set marketplace", async function () {
+    const { factory, marketplace } = await loadFixture(deployFactoryFixture);
+    expect(await factory.marketplace()).to.equal(await marketplace.getAddress());
+  });
+
+  it("should deploy a new TicketNFT contract via createEvent", async function () {
+    const { factory, organizer } = await loadFixture(deployFactoryFixture);
+    const tx = await factory.createEvent(
+      "Factory Event",
+      "FE",
+      1000,
+      ethers.parseEther("0.01"),
+      110,
+      organizer.address
+    );
+    const receipt = await tx.wait();
+    
+    const events = await factory.getDeployedEvents();
+    expect(events.length).to.equal(1);
+    
+    const eventAddress = events[0];
+    const TicketNFT = await ethers.getContractFactory("TicketNFT");
+    const nft = TicketNFT.attach(eventAddress);
+    
+    expect(await nft.name()).to.equal("Factory Event");
+    expect(await nft.owner()).to.equal(organizer.address); // ownership transferred to organizer
   });
 });

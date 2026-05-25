@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Calendar, MapPin, ChevronRight, ChevronLeft, CreditCard, Clock, Ticket, ShieldCheck, Mail } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -7,6 +7,18 @@ import { SINGER_IMAGES, CONCERT_IMAGES } from '../constants/images';
 
 const Home = () => {
   const navigate = useNavigate();
+  const [dbEvents, setDbEvents] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/events')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setDbEvents(data.data);
+        }
+      })
+      .catch(err => console.error('Failed to fetch events:', err));
+  }, []);
 
   const artists = [
     { name: 'Enrique Iglesias', img: SINGER_IMAGES.enrique_iglesias, location: 'Manchester', date: 'Oct 17 - Oct 21', price: 299.99 },
@@ -16,14 +28,26 @@ const Home = () => {
     { name: 'Selena Gomez', img: SINGER_IMAGES.selena_gomez, location: 'London', date: 'Oct 30 - Oct 31', price: 299.99 }
   ];
 
-  const events = [
-    { title: 'Taylor Swift', img: CONCERT_IMAGES.taylor_swift, date: 'June 14 - June 19 London', price: 799.99, timeEnd: '15D, 08:45:03' },
-    { title: 'Dua Lipa', img: CONCERT_IMAGES.dua_lipa, date: 'July 20 - July 24 Paris', price: 399.99, timeEnd: '25D, 11:34:03' },
-    { title: 'Lady Gaga', img: CONCERT_IMAGES.lady_gaga, date: 'Aug 10 - Aug 15 New York', price: 450.00, timeEnd: '45D, 05:45:09' },
-    { title: 'Adele', img: CONCERT_IMAGES.adele, date: 'Sep 05 - Sep 09 Berlin', price: 499.99, timeEnd: '75D, 10:00:00' },
-    { title: 'Ed Sheeran', img: CONCERT_IMAGES.ed_sheeran, date: 'Oct 12 - Oct 18 Tokyo', price: 150.00, timeEnd: '105D, 12:30:00' },
-    { title: 'Rihanna', img: CONCERT_IMAGES.rihanna, date: 'Nov 22 - Nov 26 Sydney', price: 599.99, timeEnd: '145D, 09:15:00' }
+  const mockEvents = [
+    { title: 'Taylor Swift', img: CONCERT_IMAGES.taylor_swift, date: 'June 14 - June 19 London', price: '0.05 ETH', timeEnd: '15D, 08:45:03', isDynamic: false },
+    { title: 'Dua Lipa', img: CONCERT_IMAGES.dua_lipa, date: 'July 20 - July 24 Paris', price: '0.03 ETH', timeEnd: '25D, 11:34:03', isDynamic: false },
+    { title: 'Lady Gaga', img: CONCERT_IMAGES.lady_gaga, date: 'Aug 10 - Aug 15 New York', price: '0.04 ETH', timeEnd: '45D, 05:45:09', isDynamic: false },
+    { title: 'Adele', img: CONCERT_IMAGES.adele, date: 'Sep 05 - Sep 09 Berlin', price: '0.04 ETH', timeEnd: '75D, 10:00:00', isDynamic: false },
+    { title: 'Ed Sheeran', img: CONCERT_IMAGES.ed_sheeran, date: 'Oct 12 - Oct 18 Tokyo', price: '0.02 ETH', timeEnd: '105D, 12:30:00', isDynamic: false },
+    { title: 'Rihanna', img: CONCERT_IMAGES.rihanna, date: 'Nov 22 - Nov 26 Sydney', price: '0.05 ETH', timeEnd: '145D, 09:15:00', isDynamic: false }
   ];
+
+  const formattedDbEvents = dbEvents.map(e => ({
+    id: e._id,
+    title: e.title,
+    img: e.imageUrl || CONCERT_IMAGES.taylor_swift,
+    date: `${new Date(e.date).toLocaleDateString()} • ${e.venue}`,
+    price: `${e.ticketPrice} ETH`,
+    timeEnd: 'Sale Active',
+    isDynamic: true
+  }));
+
+  const events = [...formattedDbEvents, ...mockEvents];
 
   return (
     <div>
@@ -130,9 +154,22 @@ const Home = () => {
                   </div>
                 </div>
                 <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>{event.title}</h3>
-                <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>{event.date}</p>
-                <div style={{ fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '1rem' }}>₹{event.price}</div>
-                <button className="btn btn-light" style={{ width: '100%' }} onClick={() => navigate('/reservation')}>Book Now</button>
+                <div style={{ fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--clr-primary-500)' }}>
+                  {event.isDynamic ? event.price : `₹${event.price}`}
+                </div>
+                <button 
+                  className="btn btn-light" 
+                  style={{ width: '100%' }} 
+                  onClick={() => {
+                    if (event.isDynamic) {
+                      navigate(`/event/${event.id}`);
+                    } else {
+                      navigate('/reservation');
+                    }
+                  }}
+                >
+                  Book Now
+                </button>
               </div>
             ))}
           </div>

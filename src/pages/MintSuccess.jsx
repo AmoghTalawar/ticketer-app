@@ -1,21 +1,24 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { CheckCircle, ArrowRight, ExternalLink } from 'lucide-react';
+import { CheckCircle, ArrowRight, ExternalLink, Download } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { CHAIN_ID } from '../contracts/addresses';
+import { useWallet } from '../context/WalletContext';
+import { CHAIN_ID, CONTRACT_ADDRESSES } from '../contracts/addresses';
 
 const GATEWAY = 'https://gateway.pinata.cloud/ipfs/';
 
 const MintSuccess = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { account } = useWallet();
 
   const tokenId  = location.state?.tokenId  ?? '—';
   const txHash   = location.state?.txHash   ?? null;
   const seat     = location.state?.seat     ?? '—';
   const ipfsCID  = location.state?.ipfsCID  ?? null;
   const tokenURI = location.state?.tokenURI ?? null;
+  const event    = location.state?.event    ?? null;
 
   const explorerBase = CHAIN_ID === 31337 || CHAIN_ID === 1337
     ? null
@@ -81,9 +84,37 @@ const MintSuccess = () => {
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <button className="btn btn-outline" onClick={() => navigate('/concerts')}>Browse More</button>
+            <button className="btn btn-outline-dark" onClick={() => navigate('/concerts')}>Browse More</button>
             <button
               className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              onClick={() => {
+                const contractAddress = event?.contractAddress || CONTRACT_ADDRESSES.TicketNFT;
+                const metadata = event ? {
+                  name: `${event.title} - Ticket #${tokenId}`,
+                  description: event.description,
+                  imageUrl: event.imageUrl,
+                  attributes: [
+                    { trait_type: 'Venue', value: event.venue },
+                    { trait_type: 'Seat', value: seat || 'General Admission' },
+                  ]
+                } : {
+                  name: `BlockTicket #${tokenId}`,
+                  description: `Official NFT Ticket #${tokenId}`,
+                  imageUrl: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?q=80&w=600',
+                  attributes: [
+                    { trait_type: 'Venue', value: 'Decentralized Arena' },
+                    { trait_type: 'Seat', value: seat || 'General Admission' },
+                  ]
+                };
+                const qrValue = `BLOCKTICKET:${contractAddress}:${tokenId}:${account}`;
+                navigate('/ticket', { state: { tokenId, metadata, qrValue } });
+              }}
+            >
+              Download Ticket <Download size={16} />
+            </button>
+            <button
+              className="btn btn-outline-dark"
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
               onClick={() => navigate('/my-tickets')}
             >

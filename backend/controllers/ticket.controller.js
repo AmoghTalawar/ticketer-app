@@ -3,7 +3,7 @@ const Ticket = require('../models/Ticket');
 // POST /api/tickets/mint — Record mint after on-chain tx confirmed (no auth required)
 const recordMint = async (req, res) => {
   try {
-    const { tokenId, owner, transactionHash, seat, ipfsMetadataCID, tokenURI } = req.body;
+    const { tokenId, owner, transactionHash, seat, ipfsMetadataCID, tokenURI, eventId } = req.body;
 
     if (tokenId === undefined || !owner || !transactionHash) {
       return res.status(400).json({
@@ -17,6 +17,7 @@ const recordMint = async (req, res) => {
       { tokenId: tokenId.toString() },
       {
         tokenId: tokenId.toString(),
+        eventId: eventId || undefined,
         owner: owner.toLowerCase(),
         transactionHash,
         seatInfo: seat || '',
@@ -41,7 +42,7 @@ const getMyTickets = async (req, res) => {
     const wallet = (req.query.wallet || '').toLowerCase();
     if (!wallet) return res.status(400).json({ success: false, message: 'wallet query param required' });
 
-    const tickets = await Ticket.find({ owner: wallet }).sort({ mintedAt: -1 });
+    const tickets = await Ticket.find({ owner: wallet }).populate('eventId').sort({ mintedAt: -1 });
     res.json({ success: true, data: tickets });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -51,7 +52,7 @@ const getMyTickets = async (req, res) => {
 // GET /api/tickets/:tokenId
 const getTicket = async (req, res) => {
   try {
-    const ticket = await Ticket.findOne({ tokenId: req.params.tokenId });
+    const ticket = await Ticket.findOne({ tokenId: req.params.tokenId }).populate('eventId');
     if (!ticket) return res.status(404).json({ success: false, message: 'Ticket not found' });
     res.json({ success: true, data: ticket });
   } catch (error) {
@@ -111,7 +112,7 @@ const delistResale = async (req, res) => {
 // GET /api/tickets/resale — All active listings
 const getResaleListings = async (req, res) => {
   try {
-    const listings = await Ticket.find({ isListed: true, isUsed: false }).sort({ updatedAt: -1 });
+    const listings = await Ticket.find({ isListed: true, isUsed: false }).populate('eventId').sort({ updatedAt: -1 });
     res.json({ success: true, data: listings });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

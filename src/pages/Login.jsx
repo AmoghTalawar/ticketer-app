@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, Wallet } from 'lucide-react';
+import { Mail, Lock, Wallet, ShieldAlert } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useWallet } from '../context/WalletContext';
@@ -8,19 +8,70 @@ import { useWallet } from '../context/WalletContext';
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { connect, connecting, isConnected, error } = useWallet();
+  const { connect, connecting, isConnected, error: walletError, setUser, user } = useWallet();
 
-  // Redirect destination after login (from WalletGuard)
-  const from = location.state?.from || '/account';
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
 
-  // If already connected, redirect immediately
+  // If already connected/logged in, redirect immediately based on role
   useEffect(() => {
-    if (isConnected) navigate(from, { replace: true });
-  }, [isConnected, navigate, from]);
+    if (isConnected && user) {
+      const target = location.state?.from || (user.role === 'organizer' ? '/organizer-dashboard' : '/account');
+      navigate(target, { replace: true });
+    }
+  }, [isConnected, user, navigate, location.state]);
 
   const handleMetamaskConnect = async () => {
-    const ok = await connect();
-    if (ok) navigate(from, { replace: true });
+    setError(null);
+    await connect();
+  };
+
+  const handleEmailLogin = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Login failed.');
+      }
+
+      setSuccess('Logged in successfully!');
+      localStorage.setItem('blockticket_token', data.token);
+      setUser(data.user);
+
+      // If they have a wallet linked and window.ethereum is available, connect it
+      if (data.user.walletAddress && window.ethereum) {
+        try {
+          await connect();
+        } catch (_) {}
+      }
+
+      setTimeout(() => {
+        navigate(from, { replace: true });
+      }, 1000);
+
+    } catch (err) {
+      setError(err.message || 'Invalid credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -62,13 +113,19 @@ const Login = () => {
             Log In
           </h1>
           <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '2.5rem', fontSize: '0.95rem' }}>
-            Connect your wallet to manage your NFT tickets.
+            Connect your wallet or enter account credentials.
           </p>
 
-          {/* Error message */}
-          {error && (
-            <div style={{ background: 'rgba(220,53,69,0.15)', border: '1px solid rgba(220,53,69,0.4)', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.5rem', color: '#ff6b6b', fontSize: '0.9rem', textAlign: 'left' }}>
-              {error}
+          {/* Error messages */}
+          {(error || walletError) && (
+            <div style={{ background: 'rgba(220,53,69,0.15)', border: '1px solid rgba(220,53,69,0.4)', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.5rem', color: '#ff6b6b', fontSize: '0.9rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ShieldAlert size={16} /> {error || walletError}
+            </div>
+          )}
+
+          {success && (
+            <div style={{ background: 'rgba(40,167,69,0.15)', border: '1px solid rgba(40,167,69,0.4)', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.5rem', color: '#28a745', fontSize: '0.9rem', textAlign: 'left' }}>
+              {success}
             </div>
           )}
 
@@ -76,7 +133,7 @@ const Login = () => {
           <button
             type="button"
             onClick={handleMetamaskConnect}
-            disabled={connecting}
+            disabled={connecting || loading}
             className="btn"
             style={{
               width: '100%',
@@ -95,12 +152,12 @@ const Login = () => {
               justifyContent: 'center',
               gap: '0.75rem',
               border: 'none',
-              cursor: connecting ? 'not-allowed' : 'pointer',
+              cursor: connecting || loading ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s',
             }}
           >
             <Wallet size={20} />
-            {connecting ? 'Connecting to MetaMask...' : 'Connect MetaMask Wallet'}
+            {connecting ? 'Signing in via MetaMask...' : 'Connect MetaMask Wallet'}
           </button>
 
           {!window.ethereum && (
@@ -118,23 +175,44 @@ const Login = () => {
             <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
           </div>
 
-          <form style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} onSubmit={e => e.preventDefault()}>
+          <form onSubmit={handleEmailLogin} style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'rgba(255,255,255,0.8)' }}>Email Address</label>
               <div style={{ position: 'relative' }}>
                 <Mail size={18} color="rgba(255,255,255,0.4)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
-                <input type="email" placeholder="name@domain.com" style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)', color: '#fff', outline: 'none', fontSize: '1rem' }} />
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="name@domain.com" 
+                  required
+                  disabled={loading}
+                  style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)', color: '#fff', outline: 'none', fontSize: '1rem' }} 
+                />
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'rgba(255,255,255,0.8)' }}>Password</label>
               <div style={{ position: 'relative' }}>
                 <Lock size={18} color="rgba(255,255,255,0.4)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
-                <input type="password" placeholder="••••••••" style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)', color: '#fff', outline: 'none', fontSize: '1rem' }} />
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••" 
+                  required
+                  disabled={loading}
+                  style={{ width: '100%', padding: '0.85rem 1rem 0.85rem 2.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)', color: '#fff', outline: 'none', fontSize: '1rem' }} 
+                />
               </div>
             </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.9rem', fontSize: '1rem', borderRadius: '12px' }}>
-              Sign In
+            <button 
+              type="submit" 
+              disabled={loading || connecting}
+              className="btn btn-primary" 
+              style={{ width: '100%', padding: '0.9rem', fontSize: '1rem', borderRadius: '12px', cursor: loading || connecting ? 'not-allowed' : 'pointer' }}
+            >
+              {loading ? 'Logging in...' : 'Sign In'}
             </button>
           </form>
 

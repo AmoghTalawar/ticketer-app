@@ -7,6 +7,10 @@ const ticketSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    eventId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Event',
+    },
     owner: {
       type: String,   // wallet address (lowercase)
       required: true,

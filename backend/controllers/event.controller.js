@@ -3,12 +3,13 @@ const Event = require('../models/Event');
 // GET /api/events
 const getEvents = async (req, res) => {
   try {
-    const { singer, city, date, category, page = 1, limit = 12 } = req.query;
+    const { singer, city, date, category, organizer, page = 1, limit = 12 } = req.query;
     const filter = { isActive: true };
 
     if (singer) filter.singer = { $regex: singer, $options: 'i' };
     if (city) filter.city = { $regex: city, $options: 'i' };
     if (category) filter.category = category;
+    if (organizer) filter.organizer = organizer;
     if (date) {
       const d = new Date(date);
       filter.date = { $gte: d, $lt: new Date(d.getTime() + 86400000) };

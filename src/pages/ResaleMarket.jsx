@@ -29,7 +29,7 @@ const fetchMeta = async (tokenURI) => {
 const ResaleMarket = () => {
   const navigate = useNavigate();
   const { account, isConnected } = useWallet();
-  const { marketplaceRead, marketplaceWrite, nftRead } = useContract();
+  const { marketplaceRead, marketplaceWrite, getNFTContract } = useContract();
 
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,57 +37,92 @@ const ResaleMarket = () => {
   const [buying, setBuying] = useState(null); // tokenId being bought
 
   const loadListings = useCallback(async () => {
-    if (!marketplaceRead || !nftRead) return;
+    if (!marketplaceRead) return;
     setLoading(true);
     try {
-      const activeIds = await marketplaceRead.getActiveListings();
+      const res = await fetch('http://localhost:5000/api/tickets/resale');
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || 'Failed to fetch listings');
+
       const items = await Promise.all(
-        activeIds.map(async (id) => {
-          const tokenId = id.toString();
-          const listing = await marketplaceRead.getListing(tokenId);
-          const tokenURI = await nftRead.tokenURI(tokenId);
-          const metadata = await fetchMeta(tokenURI);
-          const owner = await nftRead.ownerOf(tokenId);
-          return {
-            tokenId,
-            seller: listing.seller,
-            price: listing.price,
-            priceEth: ethers.formatEther(listing.price),
-            metadata,
-            owner,
-          };
+        data.data.map(async (ticket) => {
+          const tokenId = ticket.tokenId;
+          const contractAddress = ticket.eventId?.contractAddress;
+          
+          if (!contractAddress) return null;
+
+          try {
+            // Verify listing details on-chain
+            const onChainListing = await marketplaceRead.listings(contractAddress, tokenId);
+            if (!onChainListing.active) return null; // Filter out inactive listings
+
+            const customNFT = getNFTContract(contractAddress, false);
+            if (!customNFT) return null;
+
+            const [tokenURI, owner] = await Promise.all([
+              customNFT.tokenURI(tokenId),
+              customNFT.ownerOf(tokenId)
+            ]);
+
+            const metadata = await fetchMeta(tokenURI);
+
+            return {
+              tokenId,
+              contractAddress,
+              seller: onChainListing.seller,
+              price: onChainListing.price,
+              priceEth: ethers.formatEther(onChainListing.price),
+              metadata: ticket.eventId ? {
+                name: ticket.eventId.title,
+                description: ticket.eventId.description,
+                imageUrl: ticket.eventId.imageUrl,
+                attributes: [
+                  { trait_type: 'Venue', value: ticket.eventId.venue },
+                  { trait_type: 'Seat', value: ticket.seatInfo || 'General Admission' }
+                ]
+              } : metadata,
+              owner,
+            };
+          } catch (err) {
+            console.warn(`Failed to verify dynamic listing for token ${tokenId} on contract ${contractAddress}:`, err);
+            return null;
+          }
         })
       );
-      setListings(items);
+
+      // Filter out null values
+      setListings(items.filter(item => item !== null));
     } catch (err) {
       console.error('Failed to load listings:', err);
     } finally {
       setLoading(false);
     }
-  }, [marketplaceRead, nftRead]);
+  }, [marketplaceRead, getNFTContract]);
 
   useEffect(() => { loadListings(); }, [loadListings]);
 
-  const handleBuy = async (tokenId, price) => {
+  const handleBuy = async (tokenId, contractAddress, price) => {
     if (!isConnected) { navigate('/login'); return; }
-    if (!marketplaceWrite) return;
+    if (!marketplaceWrite || !contractAddress) return;
 
     setBuying(tokenId);
     setToast({ status: 'pending', message: 'Confirm purchase in MetaMask…' });
     try {
-      const tx = await marketplaceWrite.buyTicket(tokenId, { value: price });
+      const tx = await marketplaceWrite.buyTicket(contractAddress, tokenId, { value: price });
       setToast({ status: 'pending', message: 'Waiting for confirmation…', txHash: tx.hash });
       await tx.wait();
 
-      // Record in backend
-      fetch('http://localhost:5000/api/tickets/buy-resale', {
+      // Record purchase in backend
+      await fetch('http://localhost:5000/api/tickets/buy-resale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tokenId, newOwner: account, transactionHash: tx.hash }),
-      }).catch(() => {});
+      });
 
-      setToast({ status: 'success', message: 'Ticket purchased!', txHash: tx.hash });
-      await loadListings();
+      setToast({ status: 'success', message: 'Ticket purchased successfully!', txHash: tx.hash });
+      setTimeout(() => {
+        navigate('/my-tickets');
+      }, 1500);
     } catch (err) {
       const msg = err?.reason ?? err?.message ?? 'Transaction failed';
       setToast({ status: 'error', message: msg });
@@ -187,7 +222,7 @@ const ResaleMarket = () => {
                   <button
                     className="btn btn-primary"
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: buying === item.tokenId ? 0.7 : 1, cursor: buying === item.tokenId ? 'not-allowed' : 'pointer' }}
-                    onClick={() => handleBuy(item.tokenId, item.price)}
+                    onClick={() => handleBuy(item.tokenId, item.contractAddress, item.price)}
                     disabled={buying === item.tokenId}
                   >
                     <ShoppingCart size={16} />
