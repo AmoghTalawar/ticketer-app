@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Wallet, LogOut, ChevronDown, AlertTriangle } from 'lucide-react';
 import { useWallet } from '../context/WalletContext';
@@ -8,12 +8,29 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { account, isConnected, isCorrectNetwork, connect, disconnect, switchNetwork, connecting, user } = useWallet();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  // Pages that have a light header background need dark text
-  const lightHeaderPages = ['/blogs', '/faq', '/contact', '/checkout', '/reservation',
+  // Detect scroll — once user scrolls 60px, switch to solid white nav on dark-bg pages
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Pages where the background is light-coloured (need dark text always)
+  const alwaysLightPages = [
+    '/blogs', '/faq', '/contact', '/checkout', '/reservation',
     '/my-tickets', '/account', '/organizer-dashboard', '/create-event',
-    '/ticket-verification', '/transaction-history', '/resale-market'];
-  const isDarkText = lightHeaderPages.some(p => location.pathname.startsWith(p));
+    '/ticket-verification', '/transaction-history', '/resale-market',
+    '/mint-success', '/ticket', '/download-ticket', '/singers',
+  ];
+  // EventDetail routes are /event/:id  — match the prefix
+  const isEventDetail = location.pathname.startsWith('/event/');
+
+  const isAlwaysLight = alwaysLightPages.some(p => location.pathname.startsWith(p)) || isEventDetail;
+
+  // On dark-hero pages (Home, Concerts) switch to dark after scroll
+  const isDarkText = isAlwaysLight || scrolled;
 
   const textColor = isDarkText ? '#111' : 'white';
   const mutedTextColor = isDarkText ? '#555' : 'rgba(255,255,255,0.7)';
@@ -60,10 +77,11 @@ const Navbar = () => {
         width: '100%',
         padding: '1.5rem 0',
         zIndex: 50,
-        background: isDarkText ? 'rgba(255,255,255,0.95)' : 'transparent',
-        backdropFilter: isDarkText ? 'blur(8px)' : 'none',
-        borderBottom: isDarkText ? '1px solid rgba(0,0,0,0.06)' : 'none',
-        transition: 'top 0.2s',
+        background: isDarkText ? 'rgba(255,255,255,0.97)' : 'transparent',
+        backdropFilter: isDarkText ? 'blur(10px)' : 'none',
+        borderBottom: isDarkText ? '1px solid rgba(0,0,0,0.07)' : 'none',
+        boxShadow: isDarkText ? '0 1px 12px rgba(0,0,0,0.06)' : 'none',
+        transition: 'background 0.25s ease, box-shadow 0.25s ease, top 0.2s',
       }}>
         <div className="container flex justify-between items-center" style={{ color: textColor }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '3rem' }}>

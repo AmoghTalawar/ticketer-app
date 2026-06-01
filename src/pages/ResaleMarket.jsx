@@ -7,6 +7,8 @@ import Footer from '../components/Footer';
 import TransactionToast from '../components/TransactionToast';
 import { useWallet } from '../context/WalletContext';
 import { useContract } from '../hooks/useContract';
+import PriceTag from '../components/PriceTag';
+import { useCurrencyConverter } from '../hooks/useCurrencyConverter';
 
 const GATEWAY = 'https://gateway.pinata.cloud/ipfs/';
 
@@ -30,6 +32,7 @@ const ResaleMarket = () => {
   const navigate = useNavigate();
   const { account, isConnected } = useWallet();
   const { marketplaceRead, marketplaceWrite, getNFTContract } = useContract();
+  const { ethToInr } = useCurrencyConverter();
 
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -211,7 +214,7 @@ const ResaleMarket = () => {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                   <span style={{ color: '#888', fontSize: '0.85rem' }}>Price</span>
-                  <span style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#111' }}>{item.priceEth} ETH</span>
+                  <PriceTag eth={item.priceEth} size="md" />
                 </div>
 
                 {item.seller.toLowerCase() === account?.toLowerCase() ? (
@@ -226,7 +229,7 @@ const ResaleMarket = () => {
                     disabled={buying === item.tokenId}
                   >
                     <ShoppingCart size={16} />
-                    {buying === item.tokenId ? 'Buying…' : `Buy for ${item.priceEth} ETH`}
+                    {buying === item.tokenId ? 'Buying…' : `Buy for ${ethToInr(item.priceEth)}`}
                   </button>
                 )}
               </div>

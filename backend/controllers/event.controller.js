@@ -1,5 +1,26 @@
 const Event = require('../models/Event');
 
+const PINATA_GATEWAY = process.env.PINATA_GATEWAY || 'https://gateway.pinata.cloud';
+
+/**
+ * Convert any ipfs:// or bare CID imageUrl to a browser-loadable HTTPS Pinata gateway URL.
+ * If the url is already https:// it is returned unchanged.
+ */
+const resolveImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('ipfs://')) return `${PINATA_GATEWAY}/ipfs/${url.replace('ipfs://', '')}`;
+  if (url.startsWith('Qm') || url.startsWith('baf')) return `${PINATA_GATEWAY}/ipfs/${url}`;
+  return url;
+};
+
+/** Normalize imageUrl on a plain event object */
+const normalizeEvent = (event) => {
+  const obj = event.toObject ? event.toObject() : { ...event };
+  obj.imageUrl = resolveImageUrl(obj.imageUrl);
+  return obj;
+};
+
 // GET /api/events
 const getEvents = async (req, res) => {
   try {
@@ -25,9 +46,11 @@ const getEvents = async (req, res) => {
       Event.countDocuments(filter),
     ]);
 
+    const normalizedEvents = events.map(normalizeEvent);
+
     res.json({
       success: true,
-      data: events,
+      data: normalizedEvents,
       pagination: {
         page: Number(page),
         limit: Number(limit),
@@ -47,7 +70,7 @@ const getEvent = async (req, res) => {
     if (!event) {
       return res.status(404).json({ success: false, message: 'Event not found' });
     }
-    res.json({ success: true, data: event });
+    res.json({ success: true, data: normalizeEvent(event) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

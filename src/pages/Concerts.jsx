@@ -4,6 +4,8 @@ import { Search, Calendar, MapPin, Filter, Clock } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { CONCERT_IMAGES } from '../constants/images';
+import { resolveImageUrl, DEFAULT_EVENT_IMAGE } from '../utils/imageUrl';
+import PriceTag from '../components/PriceTag';
 
 const Concerts = () => {
   const navigate = useNavigate();
@@ -40,10 +42,11 @@ const Concerts = () => {
   ];
 
   // Map database events to same structure
+  // resolveImageUrl converts ipfs:// or bare CIDs → Pinata HTTPS gateway URL
   const formattedDbEvents = dbEvents.map(e => ({
     id: e._id,
     title: e.title,
-    img: e.imageUrl || CONCERT_IMAGES.taylor_swift,
+    img: resolveImageUrl(e.imageUrl, DEFAULT_EVENT_IMAGE),
     date: `${new Date(e.date).toLocaleDateString()} • ${e.venue}`,
     price: e.ticketPrice,
     timeEnd: 'Sale Active',
@@ -118,7 +121,13 @@ const Concerts = () => {
               {filteredEvents.map((event, idx) => (
                 <div key={idx} style={{ background: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ position: 'relative', height: '250px' }}>
-                    <img src={event.img} alt={event.title} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img
+                      src={event.img}
+                      alt={event.title}
+                      referrerPolicy="no-referrer"
+                      onError={(e) => { e.currentTarget.src = DEFAULT_EVENT_IMAGE; }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                     <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', padding: '2rem 1rem 1rem', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                        <div className="flex items-center gap-2"><Clock size={16} /> Time to end</div>
                        <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{event.timeEnd}</div>
@@ -133,7 +142,7 @@ const Concerts = () => {
                     </div>
                     <div className="flex justify-between items-center" style={{ marginTop: 'auto' }}>
                       <div style={{ fontWeight: 'bold', fontSize: '1.25rem', color: 'var(--clr-primary-500)' }}>
-                        {event.price} ETH
+                        <PriceTag eth={event.price} size="md" />
                       </div>
                       <button 
                         className="btn btn-primary" 

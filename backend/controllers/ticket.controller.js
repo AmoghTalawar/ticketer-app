@@ -1,4 +1,5 @@
 const Ticket = require('../models/Ticket');
+const Event  = require('../models/Event');
 
 // POST /api/tickets/mint — Record mint after on-chain tx confirmed (no auth required)
 const recordMint = async (req, res) => {
@@ -29,6 +30,11 @@ const recordMint = async (req, res) => {
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
+
+    // Atomically increment ticketsSold on the Event document
+    if (eventId) {
+      await Event.findByIdAndUpdate(eventId, { $inc: { ticketsSold: 1 } }).catch(() => {});
+    }
 
     res.status(201).json({ success: true, data: ticket, message: 'Ticket recorded' });
   } catch (error) {
@@ -135,4 +141,18 @@ const markUsed = async (req, res) => {
   }
 };
 
-module.exports = { recordMint, getMyTickets, getTicket, listForResale, buyResale, delistResale, getResaleListings, markUsed };
+// GET /api/tickets/count?eventId=xxx — Count tickets minted for a specific event
+const countByEvent = async (req, res) => {
+  try {
+    const { eventId } = req.query;
+    if (!eventId) return res.status(400).json({ success: false, message: 'eventId query param required' });
+    const count = await Ticket.countDocuments({ eventId, isUsed: false });
+    // Also count used ones for total sold
+    const totalCount = await Ticket.countDocuments({ eventId });
+    res.json({ success: true, count: totalCount });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { recordMint, getMyTickets, getTicket, listForResale, buyResale, delistResale, getResaleListings, markUsed, countByEvent };

@@ -53,7 +53,9 @@ const CreateEvent = () => {
         throw new Error(uploadData.message || 'Failed to upload image to Pinata');
       }
 
-      const { url: imageUrl, cid: ipfsCID } = uploadData;
+      // gatewayUrl is the HTTP-accessible Pinata gateway URL (browsers can load this)
+      // url is ipfs:// which browsers cannot fetch directly — we store gatewayUrl
+      const { gatewayUrl: imageUrl, cid: ipfsCID } = uploadData;
 
       // 2. Deploy TicketNFT via EventFactory contract
       setToast({ status: 'pending', message: 'Confirm event contract deployment in MetaMask...' });

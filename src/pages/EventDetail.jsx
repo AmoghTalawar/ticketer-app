@@ -4,6 +4,8 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { MapPin, Calendar, Clock, Ticket, ShieldAlert } from 'lucide-react';
 import { useContract } from '../hooks/useContract';
+import { resolveImageUrl, DEFAULT_EVENT_IMAGE } from '../utils/imageUrl';
+import PriceTag from '../components/PriceTag';
 
 const EventDetail = () => {
   const { id } = useParams();
@@ -97,7 +99,13 @@ const EventDetail = () => {
             
             {/* Left Col: Image */}
             <div style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-              <img src={event.imageUrl} alt={event.title} referrerPolicy="no-referrer" style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '500px', objectFit: 'cover' }} />
+              <img
+                src={resolveImageUrl(event.imageUrl, DEFAULT_EVENT_IMAGE)}
+                alt={event.title}
+                referrerPolicy="no-referrer"
+                onError={(e) => { e.currentTarget.src = DEFAULT_EVENT_IMAGE; }}
+                style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '500px', objectFit: 'cover' }}
+              />
             </div>
 
             {/* Right Col: Details */}
@@ -123,7 +131,7 @@ const EventDetail = () => {
               <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Ticket Price</span>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--clr-primary-500)' }}>{event.ticketPrice} MATIC</span>
+                  <PriceTag eth={event.ticketPrice} size="lg" />
                 </div>
                 
                 <div style={{ marginBottom: '1rem' }}>

@@ -4,6 +4,8 @@ import { Search, Calendar, MapPin, ChevronRight, ChevronLeft, CreditCard, Clock,
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { SINGER_IMAGES, CONCERT_IMAGES } from '../constants/images';
+import { resolveImageUrl, DEFAULT_EVENT_IMAGE } from '../utils/imageUrl';
+import PriceTag from '../components/PriceTag';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -40,7 +42,7 @@ const Home = () => {
   const formattedDbEvents = dbEvents.map(e => ({
     id: e._id,
     title: e.title,
-    img: e.imageUrl || CONCERT_IMAGES.taylor_swift,
+    img: resolveImageUrl(e.imageUrl, DEFAULT_EVENT_IMAGE),
     date: `${new Date(e.date).toLocaleDateString()} • ${e.venue}`,
     price: `${e.ticketPrice} ETH`,
     timeEnd: 'Sale Active',
@@ -147,7 +149,13 @@ const Home = () => {
             {events.map((event, idx) => (
               <div key={idx} style={{ width: '300px', flexShrink: 0, textAlign: 'left' }}>
                 <div style={{ position: 'relative', height: '350px', borderRadius: '16px', overflow: 'hidden', marginBottom: '1rem' }}>
-                  <img src={event.img} alt={event.title} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img
+                    src={event.img}
+                    alt={event.title}
+                    referrerPolicy="no-referrer"
+                    onError={(e) => { e.currentTarget.src = DEFAULT_EVENT_IMAGE; }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
                   <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', padding: '2rem 1rem 1rem', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                      <div className="flex items-center gap-2"><Clock size={16} /> Time to end</div>
                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{event.timeEnd}</div>
@@ -155,7 +163,7 @@ const Home = () => {
                 </div>
                 <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>{event.title}</h3>
                 <div style={{ fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--clr-primary-500)' }}>
-                  {event.isDynamic ? event.price : `₹${event.price}`}
+                  <PriceTag eth={event.isDynamic ? event.price : (parseFloat(event.price) / 200000).toFixed(4)} size="md" />
                 </div>
                 <button 
                   className="btn btn-light" 

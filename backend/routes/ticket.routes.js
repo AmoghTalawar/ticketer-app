@@ -9,10 +9,12 @@ const {
   delistResale,
   getResaleListings,
   markUsed,
+  countByEvent,
 } = require('../controllers/ticket.controller');
 
 router.post('/mint', recordMint);
 router.get('/my', getMyTickets);
+router.get('/count', countByEvent);       // ?eventId=xxx
 router.get('/resale', getResaleListings);
 router.post('/list-resale', listForResale);
 router.post('/buy-resale', buyResale);

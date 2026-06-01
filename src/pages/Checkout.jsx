@@ -9,6 +9,8 @@ import { useContract } from '../hooks/useContract';
 import { useWallet } from '../context/WalletContext';
 import { CONCERT_IMAGES } from '../constants/images';
 import { CHAIN_ID, CONTRACT_ADDRESSES } from '../contracts/addresses';
+import PriceTag from '../components/PriceTag';
+import { useCurrencyConverter } from '../hooks/useCurrencyConverter';
 
 // Build a minimal on-chain metadata URI for the ticket in case IPFS fails
 const buildTokenURI = (seat, eventName, date, imageUrl) => {
@@ -33,6 +35,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const { getNFTContract } = useContract();
   const { account, chainId, switchNetwork } = useWallet();
+  const { ethToInr } = useCurrencyConverter();
 
   // Load custom event data from state, fallback to Taylor Swift
   const event = location.state?.event || {
@@ -46,15 +49,25 @@ const Checkout = () => {
   };
 
   const selectedSeats = location.state?.selectedSeats || ['S1-0-1'];
-  const ticketPrice = parseFloat(event.ticketPrice || '0.01');
-  const subtotal = selectedSeats.length * ticketPrice;
-  const serviceFee = selectedSeats.length * (ticketPrice * 0.05); // 5% fee
-  const total = subtotal + serviceFee;
+
+  // ── Single source of truth for price ─────────────────────────────────────
+  // onChainPrice (BigInt wei) is fetched from the contract — that's what MetaMask
+  // will actually charge. We use it for EVERY calculation so the UI is consistent.
+  // Before it loads we fall back to the DB value so the page isn't blank.
+  const [onChainPrice, setOnChainPrice] = useState(null);
+
+  // effectivePrice in ETH (number) — updates the moment onChainPrice arrives
+  const effectivePrice = onChainPrice
+    ? parseFloat(ethers.formatEther(onChainPrice))
+    : parseFloat(event.ticketPrice || '0.01');
+
+  const subtotal    = selectedSeats.length * effectivePrice;
+  const serviceFee  = selectedSeats.length * (effectivePrice * 0.05);
+  const total       = subtotal + serviceFee;
 
   const [toast, setToast] = useState(null);
   const [minting, setMinting] = useState(false);
   const [agreed, setAgreed] = useState(false);
-  const [onChainPrice, setOnChainPrice] = useState(null); // fetched once on mount
 
   const isWrongNetwork = chainId !== CHAIN_ID;
   const closeToast = () => setToast(null);
@@ -297,21 +310,25 @@ const Checkout = () => {
                   <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
                     Section {seat.split('-')[0].replace('S', '')}, Row {seat.split('-')[1]}, Seat {seat.split('-')[2]}
                   </div>
-                  <div style={{ fontWeight: 'bold' }}>{ticketPrice} MATIC</div>
+                  <div style={{ fontWeight: 'bold' }}>
+                    <PriceTag eth={effectivePrice} size="sm" />
+                  </div>
                 </div>
               </div>
             ))}
 
             <div style={{ marginTop: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', color: '#555', fontSize: '1.1rem' }}>
-                <span>Subtotal</span><span>{ticketPrice} MATIC × {selectedSeats.length}</span>
+                <span>Subtotal ({selectedSeats.length} ticket{selectedSeats.length > 1 ? 's' : ''})</span>
+                <PriceTag eth={subtotal} size="sm" showEth={false} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', color: '#555', fontSize: '1.1rem' }}>
-                <span>Platform Fee</span><span>~2%</span>
+                <span>Service Fee (5%)</span>
+                <PriceTag eth={serviceFee} size="sm" showEth={false} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.3rem', borderTop: '1px solid #eaeaea', paddingTop: '1.5rem' }}>
                 <span>Total <span style={{ fontWeight: 'normal', color: '#888', fontSize: '1.1rem' }}>({selectedSeats.length} ticket{selectedSeats.length > 1 ? 's' : ''})</span></span>
-                <span>{total.toFixed(3)} MATIC</span>
+                <PriceTag eth={total} size="lg" />
               </div>
             </div>
           </div>
@@ -335,14 +352,7 @@ const Checkout = () => {
               </div>
             )}
 
-            {/* Wallet info */}
-            <div style={{ background: '#f8f9fa', borderRadius: '12px', padding: '1rem 1.5rem', marginBottom: '2rem', fontSize: '0.9rem' }}>
-              <div style={{ color: '#888', marginBottom: '0.25rem' }}>Connected Wallet</div>
-              <div style={{ fontFamily: 'monospace', fontWeight: '600', color: '#111', wordBreak: 'break-all' }}>{account}</div>
-              <div style={{ color: '#888', marginTop: '0.5rem', fontSize: '0.8rem' }}>
-                Ticket price: <strong style={{ color: '#111' }}>{onChainPrice ? ethers.formatEther(onChainPrice) + ' MATIC' : 'loading…'}</strong>
-              </div>
-            </div>
+
 
             {/* What happens */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
@@ -373,7 +383,9 @@ const Checkout = () => {
               onClick={handleMint}
               disabled={minting}
             >
-              {minting ? 'Minting…' : `Mint NFT Ticket (${onChainPrice ? ethers.formatEther(onChainPrice) : ticketPrice} MATIC)`}
+              {minting
+                ? 'Minting…'
+                : `Pay ${ethToInr(total)} (≈${total.toFixed(4)} ETH)`}
             </button>
 
             <p style={{ textAlign: 'center', color: '#888', fontSize: '0.85rem', marginTop: '1rem' }}>
